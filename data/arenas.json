@@ -1,0 +1,305 @@
+{
+  "arenas": [
+    {
+      "id": "swyth_salt_ring_trials",
+      "name": "Swyth: The Salt-Ring Trials",
+      "description": "Five escalating arena rounds. Skill challenge mini-games with HP attrition, prizes, and enemy tokens.",
+      "rounds": [
+        {
+          "id": "r1",
+          "title": "Round 1 \u2014 The Gate-Clash",
+          "map": "assets/maps/swyth_base_rounds_1_2.png",
+          "reward_gp": 500,
+          "skill_challenge": {
+            "target_successes": 6,
+            "max_failures": 3,
+            "damage_on_failure": "2d6",
+            "notes": [
+              "Team skill challenge. Each active player rolls once per turn.",
+              "Reach 6 successes before 3 failures. Each failure deals 2d6 damage to the player who failed.",
+              "Pick an approach, choose DC (Easy/Standard/Hard), enter your modifier, then roll d20."
+            ],
+            "actions": [
+              {
+                "id": "athletics",
+                "label": "Drive them back (Athletics)"
+              },
+              {
+                "id": "acrobatics",
+                "label": "Footwork & feints (Acrobatics)"
+              },
+              {
+                "id": "intimidation",
+                "label": "Break morale (Intimidation)"
+              },
+              {
+                "id": "perception",
+                "label": "Read the tells (Perception)"
+              },
+              {
+                "id": "deception",
+                "label": "Bait an opening (Deception)"
+              },
+              {
+                "id": "performance",
+                "label": "Win the crowd (Performance)"
+              }
+            ],
+            "dcs": {
+              "easy": 13,
+              "standard": 14,
+              "hard": 16
+            }
+          },
+          "enemies": [
+            {
+              "name": "Arena Duelist",
+              "count": 2,
+              "token": "enemy",
+              "hp": 45,
+              "size": 1
+            },
+            {
+              "name": "Referee",
+              "count": 1,
+              "token": "npc",
+              "hp": 1,
+              "size": 1,
+              "locked": true
+            }
+          ]
+        },
+        {
+          "id": "r2",
+          "title": "Round 2 \u2014 The Salt-Sprint",
+          "map": "assets/maps/swyth_base_rounds_1_2.png",
+          "reward_gp": 1000,
+          "skill_challenge": {
+            "target_successes": 7,
+            "max_failures": 3,
+            "damage_on_failure": "3d6",
+            "notes": [
+              "Relay-style chaos: nets, caltrops, and shoves at full speed.",
+              "Each failure deals 3d6 damage to the failing player.",
+              "If you choose a high-risk stunt, pick Hard DC for a bigger narrative payoff."
+            ],
+            "actions": [
+              {
+                "id": "athletics",
+                "label": "Sprint & shoulder through (Athletics)"
+              },
+              {
+                "id": "acrobatics",
+                "label": "Vault & roll (Acrobatics)"
+              },
+              {
+                "id": "sleight",
+                "label": "Cut free / snag a marker (Sleight of Hand)"
+              },
+              {
+                "id": "survival",
+                "label": "Pick the safest line (Survival)"
+              },
+              {
+                "id": "medicine",
+                "label": "Patch a stumble mid-run (Medicine)"
+              }
+            ],
+            "dcs": {
+              "easy": 14,
+              "standard": 15,
+              "hard": 17
+            }
+          },
+          "enemies": [
+            {
+              "name": "Netter",
+              "count": 2,
+              "token": "enemy",
+              "hp": 1,
+              "size": 1,
+              "locked": true
+            },
+            {
+              "name": "Caltrop Patch",
+              "count": 3,
+              "token": "hazard",
+              "hp": 1,
+              "size": 1,
+              "locked": true
+            }
+          ]
+        },
+        {
+          "id": "r3",
+          "title": "Round 3 \u2014 Pillars of Swyth",
+          "map": "assets/maps/swyth_pillars_round_3.png",
+          "reward_gp": 2500,
+          "skill_challenge": {
+            "target_successes": 8,
+            "max_failures": 3,
+            "damage_on_failure": "4d6",
+            "notes": [
+              "The pillars create blind angles and sudden impacts.",
+              "Each failure also adds 1 Pressure. At 3 Pressure, the next failure damage spikes to 6d6, then Pressure resets.",
+              "Use pillars as cover: stealth, baiting, and ambush moves shine here."
+            ],
+            "actions": [
+              {
+                "id": "stealth",
+                "label": "Disappear behind pillars (Stealth)"
+              },
+              {
+                "id": "investigation",
+                "label": "Find the weak angle (Investigation)"
+              },
+              {
+                "id": "acrobatics",
+                "label": "Rebound & reposition (Acrobatics)"
+              },
+              {
+                "id": "athletics",
+                "label": "Shove into stone (Athletics)"
+              },
+              {
+                "id": "arcana",
+                "label": "Sense the ring wards (Arcana)"
+              }
+            ],
+            "dcs": {
+              "easy": 15,
+              "standard": 16,
+              "hard": 18
+            }
+          },
+          "enemies": [
+            {
+              "name": "Pillar-Fighter",
+              "count": 3,
+              "token": "enemy",
+              "hp": 55,
+              "size": 1
+            }
+          ]
+        },
+        {
+          "id": "r4",
+          "title": "Round 4 \u2014 The Beast-Pen",
+          "map": "assets/maps/swyth_beast_pen_round_4.png",
+          "reward_gp": 5000,
+          "skill_challenge": {
+            "target_successes": 9,
+            "max_failures": 3,
+            "damage_on_failure": "5d6",
+            "notes": [
+              "Beasts surge from pens. You can control them or outlast them.",
+              "Once per player this round: if you pick Animal Handling and Hard DC and succeed, you gain +2 successes (instead of +1).",
+              "Failures represent goring, bites, and fence slams (5d6)."
+            ],
+            "actions": [
+              {
+                "id": "animal_handling",
+                "label": "Calm / redirect a beast (Animal Handling)"
+              },
+              {
+                "id": "nature",
+                "label": "Exploit instincts (Nature)"
+              },
+              {
+                "id": "athletics",
+                "label": "Wrestle / pin / hold a gate (Athletics)"
+              },
+              {
+                "id": "acrobatics",
+                "label": "Dodge through chaos (Acrobatics)"
+              },
+              {
+                "id": "intimidation",
+                "label": "Roar them back (Intimidation)"
+              }
+            ],
+            "dcs": {
+              "easy": 16,
+              "standard": 17,
+              "hard": 19
+            }
+          },
+          "enemies": [
+            {
+              "name": "Razor-Boar",
+              "count": 1,
+              "token": "beast",
+              "hp": 95,
+              "size": 2
+            },
+            {
+              "name": "Hooked Hyena",
+              "count": 2,
+              "token": "beast",
+              "hp": 55,
+              "size": 1
+            }
+          ]
+        },
+        {
+          "id": "r5",
+          "title": "Round 5 \u2014 Wyvern Rite (Finale)",
+          "map": "assets/maps/swyth_wyvern_rite_round_5.png",
+          "reward_gp": 50000,
+          "skill_challenge": {
+            "target_successes": 12,
+            "max_failures": 2,
+            "damage_on_failure": "8d6",
+            "notes": [
+              "Almost impossible by design. Two failures ends the run.",
+              "Team Special: once per turn, ONE player may choose 'Work the winch'. On success, DCs reduce by 1 next turn (minimum Easy DC 14).",
+              "Reach 12 successes to claim the ludicrous purse."
+            ],
+            "actions": [
+              {
+                "id": "athletics",
+                "label": "Hold the line (Athletics)"
+              },
+              {
+                "id": "acrobatics",
+                "label": "Evade the dive (Acrobatics)"
+              },
+              {
+                "id": "perception",
+                "label": "Read the wings (Perception)"
+              },
+              {
+                "id": "survival",
+                "label": "Predict strike path (Survival)"
+              },
+              {
+                "id": "arcana",
+                "label": "Disrupt the rite glyph (Arcana)"
+              },
+              {
+                "id": "winch",
+                "label": "Work the winch (Strength check) \u2014 Team once/turn",
+                "special": "team_once"
+              }
+            ],
+            "dcs": {
+              "easy": 17,
+              "standard": 18,
+              "hard": 20
+            }
+          },
+          "enemies": [
+            {
+              "name": "Wyvern",
+              "count": 1,
+              "token": "wyvern",
+              "hp": 200,
+              "size": 3,
+              "image": "assets/wyvern.png"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

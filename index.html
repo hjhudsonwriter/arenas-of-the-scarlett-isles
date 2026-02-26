@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Arenas of The Scarlett Isles</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand__title">Arenas of The Scarlett Isles</div>
+      <div class="brand__subtitle">Arena skill challenges + draggable tokens</div>
+    </div>
+
+    <div class="controls">
+      <label class="field">
+        <span>Arena</span>
+        <select id="arenaSelect"></select>
+      </label>
+
+      <label class="field">
+        <span>Round</span>
+        <select id="roundSelect"></select>
+      </label>
+
+      <button id="enterArenaBtn" class="btn btn--primary">Enter The Arena</button>
+      <button id="addPlayerBtn" class="btn">Add Player</button>
+
+      <div class="divider"></div>
+
+      <label class="field field--slim">
+        <span>Grid</span>
+        <input id="gridToggle" type="checkbox" checked />
+      </label>
+      <label class="field field--slim">
+        <span>Size</span>
+        <input id="gridSize" type="range" min="30" max="120" value="70" />
+      </label>
+      <button id="resetPositionsBtn" class="btn btn--ghost">Reset Tokens</button>
+      <button id="resetRunBtn" class="btn btn--ghost">Reset Run</button>
+    </div>
+  </header>
+
+  <main class="layout">
+    <section class="mapPanel">
+      <div id="mapViewport" class="mapViewport">
+        <img id="mapImage" class="mapImage" alt="Arena battlemap" />
+        <div id="gridOverlay" class="gridOverlay"></div>
+        <div id="tokenLayer" class="tokenLayer" aria-label="Tokens layer"></div>
+      </div>
+
+      <div class="mapFooter">
+        <div class="pill" id="statusPill">Pick an arena, add players, then Enter The Arena.</div>
+        <div class="pill pill--right">
+          <span class="muted">Gold:</span> <strong id="goldTotal">0</strong>
+          <span class="muted">|</span>
+          <span class="muted">Success:</span> <strong id="succCount">0</strong>/<span id="succTarget">0</span>
+          <span class="muted">Fail:</span> <strong id="failCount">0</strong>/<span id="failMax">0</span>
+        </div>
+      </div>
+    </section>
+
+    <aside class="sidePanel">
+      <div class="panelBlock">
+        <div class="panelTitle">Party</div>
+        <div id="partyList" class="list"></div>
+      </div>
+
+      <div class="panelBlock">
+        <div class="panelTitle">Enemies</div>
+        <div id="enemyList" class="list"></div>
+      </div>
+
+      <div class="panelBlock">
+        <div class="panelTitle">Round Console</div>
+        <div class="console" id="console"></div>
+        <div class="consoleActions">
+          <button id="openRoundRulesBtn" class="btn btn--ghost">View Round Rules</button>
+          <button id="nextTurnBtn" class="btn">Play Turn</button>
+          <button id="forfeitBtn" class="btn btn--danger">Forfeit</button>
+        </div>
+      </div>
+    </aside>
+  </main>
+
+  <!-- MODALS -->
+  <div id="modalBackdrop" class="backdrop hidden"></div>
+
+  <div id="modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modalHeader">
+      <div>
+        <div id="modalTitle" class="modalTitle">Modal</div>
+        <div id="modalSubtitle" class="modalSubtitle"></div>
+      </div>
+      <button id="modalClose" class="iconBtn" aria-label="Close">✕</button>
+    </div>
+    <div id="modalBody" class="modalBody"></div>
+    <div id="modalActions" class="modalActions"></div>
+  </div>
+
+  <template id="tplAddPlayer">
+    <form class="form" id="addPlayerForm">
+      <div class="grid2">
+        <label class="field">
+          <span>Name</span>
+          <input name="name" required placeholder="e.g. Runa" />
+        </label>
+        <label class="field">
+          <span>Max HP</span>
+          <input name="maxHp" type="number" required min="1" value="60" />
+        </label>
+      </div>
+
+      <label class="field">
+        <span>Token Image (optional)</span>
+        <input name="image" type="file" accept="image/*" />
+        <small class="hint">If omitted, a default ring token is used.</small>
+      </label>
+
+      <div class="grid2">
+        <label class="field">
+          <span>Token Size</span>
+          <select name="size">
+            <option value="1" selected>Medium (1x1)</option>
+            <option value="2">Large (2x2)</option>
+            <option value="3">Huge (3x3)</option>
+          </select>
+        </label>
+
+        <label class="field">
+          <span>Tag (optional)</span>
+          <input name="tag" placeholder="e.g. Blue Team" />
+        </label>
+      </div>
+
+      <div class="row">
+        <button class="btn btn--primary" type="submit">Add</button>
+        <button class="btn" type="button" data-cancel>Cancel</button>
+      </div>
+    </form>
+  </template>
+
+  <script src="app.js"></script>
+</body>
+</html>
