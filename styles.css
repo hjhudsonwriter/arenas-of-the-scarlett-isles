@@ -50,7 +50,7 @@ select:focus,input:focus{
 }
 .btn{
   border:1px solid var(--line);
-  background: 255,255,255,.05);
+  background: rgba(255,255,255,.05);
   color: var(--ink);
   border-radius:14px;
   padding:10px 12px;
@@ -114,8 +114,8 @@ select:focus,input:focus{
 .gridOverlay{
   position:absolute; inset:0;
   pointer-events:none;
-  opacity:.55;
-  mix-blend-mode: overlay;
+  opacity:.70;
+  mix-blend-mode: normal;
 }
 .tokenLayer{ position:absolute; inset:0; }
 .mapFooter{
@@ -171,9 +171,9 @@ select:focus,input:focus{
   border-radius: 999px;
   overflow:hidden;
   margin-top:8px;
-  border:1px solid 255,255,255,.07);
+  border:1px solid rgba(255,255,255,.07);
 }
-.hpFill{ height:100%; width:50%; background: 217,179,95,.9); }
+.hpFill{ height:100%; width:50%; background: rgba(217,179,95,.9); }
 
 .smallBtns{ display:flex; gap:6px; flex-wrap:wrap; margin-top:8px; }
 .smallBtns .btn{ padding:7px 9px; border-radius: 12px; font-size:12px; }
@@ -185,7 +185,7 @@ select:focus,input:focus{
   height: 210px;
   overflow:auto;
   border:1px solid var(--line);
-  background: 0,0,0,.28);
+  background: rgba(0,0,0,.28);
   border-radius: 14px;
   padding:10px;
   white-space: pre-wrap;
@@ -285,7 +285,7 @@ border:1px solid rgba(255,255,255,.12);
 .kbd{
   font-family: var(--mono);
   background: rgba(255,255,255,.06);
-  border: 1px solid 255,255,255,.12);
+  border: 1px solid rgba(255,255,255,.12);
   padding: 2px 7px;
   border-radius: 10px;
   font-size: 12px;
