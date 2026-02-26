@@ -38,6 +38,38 @@ function uid(prefix="id"){
 }
 function clamp(n, a, b){ return Math.max(a, Math.min(b, n)); }
 
+async function fileToSmallDataURL(file, maxSize=128, quality=0.75){
+  // Convert an image file to a small compressed dataURL (webp if possible).
+  const dataUrl = await new Promise((resolve, reject)=>{
+    const r = new FileReader();
+    r.onload = ()=>resolve(r.result);
+    r.onerror = reject;
+    r.readAsDataURL(file);
+  });
+
+  const img = await new Promise((resolve, reject)=>{
+    const i = new Image();
+    i.onload = ()=>resolve(i);
+    i.onerror = reject;
+    i.src = dataUrl;
+  });
+
+  const scale = Math.min(1, maxSize / Math.max(img.width, img.height));
+  const w = Math.max(1, Math.round(img.width * scale));
+  const h = Math.max(1, Math.round(img.height * scale));
+
+  const canvas = document.createElement("canvas");
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext("2d");
+  ctx.drawImage(img, 0, 0, w, h);
+
+  try{
+    return canvas.toDataURL("image/webp", quality);
+  }catch(e){
+    return canvas.toDataURL("image/png");
+  }
+}
 function save(){
   const payload = {
     players: state.players,
@@ -46,7 +78,29 @@ function save(){
     gridSize: state.gridSize,
     totalGold: state.totalGold
   };
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+
+  try{
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+    return true;
+  }catch(err){
+    // If quota exceeded, strip images and try once more.
+    if(String(err).includes("QuotaExceeded")){
+      const slim = JSON.parse(JSON.stringify(payload));
+      for(const p of (slim.players||[])){
+        if(p.image && String(p.image).startsWith("data:")) p.image = "";
+      }
+      try{
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(slim));
+        console.warn("Storage quota exceeded: saved without player images.");
+        return false; // saved, but images were dropped
+      }catch(e2){
+        console.error("Still exceeded quota after slimming:", e2);
+        return false;
+      }
+    }
+    console.error("Save failed:", err);
+    return false;
+  }
 }
 
 function load(){
@@ -88,8 +142,8 @@ function setGrid(){
   const s = state.gridSize;
   overlay.style.backgroundSize = `${s}px ${s}px`;
   overlay.style.backgroundImage = `
-    linear-gradient(to right, rgba(255,255,255,.22) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(255,255,255,.22) 1px, transparent 1px)
+    linear-gradient(to right, rgba(255,255,255,.34) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255,255,255,.34) 1px, transparent 1px)
   `;
 }
 
@@ -887,22 +941,29 @@ function openAddPlayer(){
     const file = fd.get("image");
 
     let image = "";
-    if(file && file instanceof File && file.size > 0){
-      image = await new Promise((resolve,reject)=>{
-        const reader = new FileReader();
-        reader.onload = ()=> resolve(reader.result);
-        reader.onerror = reject;
-        reader.readAsDataURL(file);
-      });
-    }
+if(file && file instanceof File && file.size > 0){
+  // Resize/compress so localStorage doesn't explode
+  image = await fileToSmallDataURL(file, 128, 0.75);
+}
 
     const id = uid("p");
     state.players.push({ id, name, maxHp, hp:maxHp, size, tag, image });
-    ensurePos(id, "player");
-    save();
-    renderPartyList();
-    renderTokens();
-    closeModal();
+ensurePos(id, "player");
+
+const ok = save();
+if(!ok){
+  // Roll back if we couldn't save cleanly (prevents duplicate ghost players)
+  state.players = state.players.filter(p => p.id !== id);
+  delete state.positions[id];
+  alert("Storage is full (likely from token images). Try a smaller image, or remove some players and re-add.");
+  renderPartyList();
+  renderTokens();
+  return;
+}
+
+renderPartyList();
+renderTokens();
+closeModal();
   });
 
   $("#modalBody").querySelector("[data-cancel]").addEventListener("click", closeModal);
