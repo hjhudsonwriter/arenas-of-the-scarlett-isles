@@ -494,10 +494,14 @@ function resetRunState(){
 
 function spawnEnemies(round){
   state.enemies = [];
+
   for(const def of (round.enemies||[])){
+    const sp = Array.isArray(def.spawns) ? def.spawns : [];
+
     for(let i=0;i<def.count;i++){
       const id = uid("e");
       const name = def.count > 1 ? `${def.name} ${i+1}` : def.name;
+
       state.enemies.push({
         id,
         name,
@@ -508,7 +512,14 @@ function spawnEnemies(round){
         locked: !!def.locked,
         image: def.image || null
       });
-      ensurePos(id, "enemy");
+
+      // If spawns exist, use them (percent coords). Otherwise fallback.
+      const pos = sp[i] || sp[0] || null;
+      if(pos && typeof pos.x === "number" && typeof pos.y === "number"){
+        state.positions[id] = { x: clamp(pos.x, 4, 96), y: clamp(pos.y, 4, 96) };
+      }else{
+        ensurePos(id, "enemy");
+      }
     }
   }
 }
