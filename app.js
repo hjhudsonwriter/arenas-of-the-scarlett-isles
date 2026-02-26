@@ -468,6 +468,15 @@ function roundRulesHtml(round){
   `;
 }
 
+function resetPlayersToMax(){
+  for(const p of state.players){
+    p.hp = p.maxHp;
+  }
+  save();
+  renderPartyList();
+  renderTokens();
+}
+
 function resetRunState(){
   state.runActive = false;
   state.turn = 1;
@@ -947,7 +956,65 @@ async function init(){
     renderTokens();
   });
 
-  $("#resetRunBtn").addEventListener("click", ()=>{
+  $("#restartRoundBtn").addEventListener("click", ()=>{
+  if(!confirm("Restart this round from the beginning? (Resets successes/failures, respawns enemies, resets party HP)")) return;
+  const current = getRound();
+  if(!current) return;
+
+  resetPlayersToMax();
+
+  // Clear only enemy positions (keep player positions)
+  state.positions = state.positions || {};
+  for(const e of state.enemies){ delete state.positions[e.id]; }
+
+  state.turn = 1;
+  state.successes = 0;
+  state.failures = 0;
+  state.pressure = 0;
+  state.dcModifier = 0;
+
+  spawnEnemies(current);
+  renderEnemyList();
+  renderTokens();
+  renderRunStats();
+
+  state.runActive = true;
+  setStatus("Round restarted. Click Play Turn.");
+  log(`--- ${current.title} restarted ---`);
+});
+
+$("#restartArenaBtn").addEventListener("click", ()=>{
+  if(!confirm("Back to Start? (Resets party HP, respawns enemies, returns to Round 1)")) return;
+  const a = getArena();
+  if(!a) return;
+
+  resetPlayersToMax();
+
+  // Back to Round 1
+  state.roundId = a.rounds[0]?.id || state.roundId;
+
+  // Clear enemies so they respawn fresh
+  state.enemies = [];
+
+  state.turn = 1;
+  state.successes = 0;
+  state.failures = 0;
+  state.pressure = 0;
+  state.dcModifier = 0;
+
+  state.runActive = false;
+
+  renderSelects();
+  renderMap();
+  renderEnemyList();
+  renderTokens();
+  renderRunStats();
+
+  setStatus("Back to start. Enter The Arena to begin.");
+  log("Returned to Round 1 (start).");
+});
+   
+   $("#resetRunBtn").addEventListener("click", ()=>{
     if(!confirm("Reset the current run (success/fail counters, enemies, DC modifiers)?")) return;
     resetRunState();
   });
@@ -965,7 +1032,29 @@ async function init(){
     openTurnModal();
   });
 
-  $("#forfeitBtn").addEventListener("click", ()=>{
+  $("#endRoundBtn").addEventListener("click", ()=>{
+  if(!state.runActive){
+    setStatus("No active round.");
+    return;
+  }
+  const living = state.enemies.filter(e=>e.maxHp && e.hp>0);
+  const msg = living.length===0
+    ? "All opponents appear defeated. End this round now?"
+    : `There are still ${living.length} opponent(s) with HP remaining. End anyway?`;
+
+  showModal({
+    title: "End Round",
+    subtitle: msg,
+    bodyHtml: `<div class="card"><div class="muted">Choose how to resolve the round. If you are using the hybrid model, this is how you finish early when the fight is over.</div></div>`,
+    actions: [
+      { label: "Count as Win", variant: "primary", onClick: ()=>{ closeModal(); endRound(true); } },
+      { label: "Count as Loss", variant: "danger", onClick: ()=>{ closeModal(); endRound(false); } },
+      { label: "Cancel", variant: "ghost", onClick: closeModal }
+    ]
+  });
+});
+   
+   $("#forfeitBtn").addEventListener("click", ()=>{
     if(!state.runActive) return;
     if(confirm("Forfeit this round?")){
       endRound(false);
