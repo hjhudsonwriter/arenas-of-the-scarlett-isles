@@ -26,7 +26,7 @@ body{
   display:flex; align-items:center; justify-content:space-between;
   gap:18px; padding:14px 16px;
   border-bottom:1px solid var(--line);
-  background: linear-gradient(180deg, 18,18,20,.95), 18,18,20,.78));
+  background: linear-gradient(180deg, rgba(18,18,20,.95), rgba(18,18,20,.78));
   backdrop-filter: blur(10px);
 }
 .brand__title{ font-weight:900; letter-spacing:.3px; }
@@ -37,7 +37,7 @@ body{
 .field input[type="range"]{ width:120px; }
 .field--slim{ min-width:90px; }
 select,input{
-  background: 255,255,255,.04);
+  background: rgba(255,255,255,.04);
   color: var(--ink);
   border:1px solid var(--line);
   border-radius:12px;
@@ -45,8 +45,8 @@ select,input{
   outline:none;
 }
 select:focus,input:focus{
-  border-color: 217,179,95,.55);
-  box-shadow: 0 0 0 4px 217,179,95,.12);
+  border-color: rgba(217,179,95,.55);
+  box-shadow: 0 0 0 4px rgba(217,179,95,.12);
 }
 .btn{
   border:1px solid var(--line);
@@ -59,15 +59,15 @@ select:focus,input:focus{
   user-select:none;
   white-space:nowrap;
 }
-.btn:hover{ background: 255,255,255,.07); border-color: 255,255,255,.16); }
+.btn:hover{ background: rgba(255,255,255,.07); border-color: rgba(255,255,255,.16); }
 .btn:active{ transform: translateY(1px); }
 .btn--primary{
-  background: linear-gradient(180deg, 161,31,43,.92), 161,31,43,.65));
-  border-color: 161,31,43,.75);
+  background: linear-gradient(180deg, rgba(161,31,43,.92), rgba(161,31,43,.65));
+  border-color: rgba(161,31,43,.75);
 }
 .btn--danger{
-  background: linear-gradient(180deg, 210,61,61,.9), 210,61,61,.62));
-  border-color: 210,61,61,.75);
+  background: linear-gradient(180deg, rgba(210,61,61,.9), rgba(210,61,61,.62));
+  border-color: rgba(210,61,61,.75);
 }
 .btn--ghost{ background: transparent; }
 .iconBtn{
@@ -85,7 +85,7 @@ select:focus,input:focus{
   padding:14px;
 }
 .mapPanel{
-  background: linear-gradient(180deg, 18,18,20,.68), 18,18,20,.40));
+  background: linear-gradient(180deg, rgba(18,18,20,.68), rgba(18,18,20,.40));
   border:1px solid var(--line);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
@@ -97,7 +97,7 @@ select:focus,input:focus{
 .mapViewport{
   position:relative;
   flex:1;
-  background: 0,0,0,.35);
+  background: rgba(0,0,0,.35);
   display:flex;
   align-items:center;
   justify-content:center;
@@ -122,14 +122,14 @@ select:focus,input:focus{
   display:flex; gap:10px;
   padding:10px;
   border-top:1px solid var(--line);
-  background: 0,0,0,.18);
+  background: rgba(0,0,0,.18);
 }
 .pill{
   display:flex; align-items:center; gap:10px;
   padding:9px 12px;
   border:1px solid var(--line);
   border-radius: 999px;
-  background: 255,255,255,.04);
+  background: rgba(255,255,255,.04);
   font-size: 13px;
   color: var(--muted);
 }
@@ -138,7 +138,7 @@ select:focus,input:focus{
 .muted{ color: var(--muted); }
 
 .sidePanel{
-  background: linear-gradient(180deg, 18,18,20,.68), 18,18,20,.40));
+  background: linear-gradient(180deg, rgba(18,18,20,.68), rgba(18,18,20,.40));
   border:1px solid var(--line);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
@@ -153,7 +153,7 @@ select:focus,input:focus{
 
 .card{
   border:1px solid var(--line);
-  background: 255,255,255,.03);
+  background: rgba(255,255,255,.03);
   border-radius: 14px;
   padding:10px;
 }
@@ -167,7 +167,7 @@ select:focus,input:focus{
 }
 .hpBar{
   height:9px;
-  background: 255,255,255,.06);
+  background: rgba(255,255,255,.06);
   border-radius: 999px;
   overflow:hidden;
   margin-top:8px;
@@ -209,15 +209,15 @@ select:focus,input:focus{
   width:100%; height:100%;
   border-radius: 14px;
   object-fit: cover;
-  border: 2px solid 0,0,0,.55);
-  box-shadow: 0 10px 25px 0,0,0,.45);
+  border: 2px solid rgba(0,0,0,.55);
+box-shadow: 0 10px 25px rgba(0,0,0,.45);
 }
 .token__label{
   position:absolute;
   bottom:-22px;
   font-size:12px;
-  background: 0,0,0,.55);
-  border:1px solid 255,255,255,.12);
+  background: rgba(0,0,0,.55);
+border:1px solid rgba(255,255,255,.12);
   color: var(--ink);
   padding:3px 8px;
   border-radius: 999px;
@@ -231,8 +231,8 @@ select:focus,input:focus{
   position:absolute;
   top:-12px;
   font-size:11px;
-  background: 161,31,43,.75);
-  border:1px solid 255,255,255,.14);
+ background: rgba(161,31,43,.75);
+border:1px solid rgba(255,255,255,.14);
   color: #fff;
   padding:2px 7px;
   border-radius: 999px;
@@ -241,7 +241,7 @@ select:focus,input:focus{
 
 .backdrop{
   position:fixed; inset:0;
-  background: 0,0,0,.6);
+  background: rgba(0,0,0,.6);
   backdrop-filter: blur(6px);
   z-index:50;
 }
@@ -252,8 +252,8 @@ select:focus,input:focus{
   width:min(760px, calc(100vw - 28px));
   max-height: calc(100vh - 28px);
   overflow:auto;
-  background: linear-gradient(180deg, 18,18,20,.98), 18,18,20,.86));
-  border:1px solid 255,255,255,.12);
+  background: linear-gradient(180deg, rgba(18,18,20,.98), rgba(18,18,20,.86));
+border:1px solid rgba(255,255,255,.12);
   border-radius: 22px;
   box-shadow: var(--shadow);
   z-index:60;
@@ -284,7 +284,7 @@ select:focus,input:focus{
 .hint{ color:var(--muted); display:block; margin-top:6px; font-size:12px; }
 .kbd{
   font-family: var(--mono);
-  background: 255,255,255,.06);
+  background: rgba(255,255,255,.06);
   border: 1px solid 255,255,255,.12);
   padding: 2px 7px;
   border-radius: 10px;
@@ -293,4 +293,10 @@ select:focus,input:focus{
 @media (max-width: 1024px){
   .layout{ grid-template-columns: 1fr; }
   .sidePanel{ min-height: 520px; }
+}
+
+/* Ensure dropdown options are readable across browsers */
+select option{
+  background: #0b0b0c;
+  color: var(--ink);
 }
