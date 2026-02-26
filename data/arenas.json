@@ -14,6 +14,8 @@
             "target_successes": 6,
             "max_failures": 3,
             "damage_on_failure": "2d6",
+            "enemy_damage_on_success": true,
+             "success_damage": { "easy": "1d8", "standard": "2d8", "hard": "3d8" }
             "notes": [
               "Team skill challenge. Each active player rolls once per turn.",
               "Reach 6 successes before 3 failures. Each failure deals 2d6 damage to the player who failed.",
@@ -78,6 +80,7 @@
             "target_successes": 7,
             "max_failures": 3,
             "damage_on_failure": "3d6",
+            "enemy_damage_on_success": false,
             "notes": [
               "Relay-style chaos: nets, caltrops, and shoves at full speed.",
               "Each failure deals 3d6 damage to the failing player.",
@@ -139,6 +142,8 @@
             "target_successes": 8,
             "max_failures": 3,
             "damage_on_failure": "4d6",
+            "enemy_damage_on_success": true,
+             "success_damage": { "easy": "1d8", "standard": "2d8", "hard": "3d8" }
             "notes": [
               "The pillars create blind angles and sudden impacts.",
               "Each failure also adds 1 Pressure. At 3 Pressure, the next failure damage spikes to 6d6, then Pressure resets.",
@@ -191,6 +196,8 @@
             "target_successes": 9,
             "max_failures": 3,
             "damage_on_failure": "5d6",
+            "enemy_damage_on_success": true,
+             "success_damage": { "easy": "1d8", "standard": "2d8", "hard": "3d8" }
             "notes": [
               "Beasts surge from pens. You can control them or outlast them.",
               "Once per player this round: if you pick Animal Handling and Hard DC and succeed, you gain +2 successes (instead of +1).",
@@ -250,6 +257,8 @@
             "target_successes": 12,
             "max_failures": 2,
             "damage_on_failure": "8d6",
+            "enemy_damage_on_success": true,
+             "success_damage": { "easy": "1d8", "standard": "2d8", "hard": "3d8" }
             "notes": [
               "Almost impossible by design. Two failures ends the run.",
               "Team Special: once per turn, ONE player may choose 'Work the winch'. On success, DCs reduce by 1 next turn (minimum Easy DC 14).",
