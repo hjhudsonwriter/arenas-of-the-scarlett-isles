@@ -15,7 +15,7 @@
             "max_failures": 3,
             "damage_on_failure": "2d6",
             "enemy_damage_on_success": true,
-             "success_damage": { "easy": "1d8", "standard": "2d8", "hard": "3d8" }
+             "success_damage": { "easy": "1d8", "standard": "2d8", "hard": "3d8" },
             "notes": [
               "Team skill challenge. Each active player rolls once per turn.",
               "Reach 6 successes before 3 failures. Each failure deals 2d6 damage to the player who failed.",
@@ -60,6 +60,10 @@
               "token": "enemy",
               "hp": 45,
               "size": 1
+              "spawns": [
+    { "x": 68, "y": 32 },
+    { "x": 72, "y": 40 }
+              ]
             },
             {
               "name": "Referee",
@@ -68,6 +72,9 @@
               "hp": 1,
               "size": 1,
               "locked": true
+              "spawns": [
+  { "x": 62, "y": 46 }
+]
             }
           ]
         },
@@ -122,6 +129,10 @@
               "hp": 1,
               "size": 1,
               "locked": true
+              "spawns": [
+  { "x": 42, "y": 44 },
+  { "x": 62, "y": 46 }
+]
             },
             {
               "name": "Caltrop Patch",
@@ -130,6 +141,11 @@
               "hp": 1,
               "size": 1,
               "locked": true
+              "spawns": [
+  { "x": 40, "y": 58 },
+  { "x": 52, "y": 52 },
+  { "x": 64, "y": 60 }
+]
             }
           ]
         },
@@ -143,7 +159,7 @@
             "max_failures": 3,
             "damage_on_failure": "4d6",
             "enemy_damage_on_success": true,
-             "success_damage": { "easy": "1d8", "standard": "2d8", "hard": "3d8" }
+             "success_damage": { "easy": "1d8", "standard": "2d8", "hard": "3d8" },
             "notes": [
               "The pillars create blind angles and sudden impacts.",
               "Each failure also adds 1 Pressure. At 3 Pressure, the next failure damage spikes to 6d6, then Pressure resets.",
@@ -184,6 +200,11 @@
               "token": "enemy",
               "hp": 55,
               "size": 1
+              "spawns": [
+  { "x": 66, "y": 30 },
+  { "x": 72, "y": 34 },
+  { "x": 68, "y": 42 }
+]
             }
           ]
         },
@@ -197,7 +218,7 @@
             "max_failures": 3,
             "damage_on_failure": "5d6",
             "enemy_damage_on_success": true,
-             "success_damage": { "easy": "1d8", "standard": "2d8", "hard": "3d8" }
+             "success_damage": { "easy": "1d8", "standard": "2d8", "hard": "3d8" },
             "notes": [
               "Beasts surge from pens. You can control them or outlast them.",
               "Once per player this round: if you pick Animal Handling and Hard DC and succeed, you gain +2 successes (instead of +1).",
@@ -238,6 +259,9 @@
               "token": "beast",
               "hp": 95,
               "size": 2
+              "spawns": [
+  { "x": 68, "y": 34 }
+]
             },
             {
               "name": "Hooked Hyena",
@@ -245,6 +269,10 @@
               "token": "beast",
               "hp": 55,
               "size": 1
+              "spawns": [
+  { "x": 72, "y": 40 },
+  { "x": 62, "y": 42 }
+]
             }
           ]
         },
@@ -258,7 +286,7 @@
             "max_failures": 2,
             "damage_on_failure": "8d6",
             "enemy_damage_on_success": true,
-             "success_damage": { "easy": "1d8", "standard": "2d8", "hard": "3d8" }
+             "success_damage": { "easy": "1d8", "standard": "2d8", "hard": "3d8" },
             "notes": [
               "Almost impossible by design. Two failures ends the run.",
               "Team Special: once per turn, ONE player may choose 'Work the winch'. On success, DCs reduce by 1 next turn (minimum Easy DC 14).",
@@ -305,6 +333,9 @@
               "hp": 200,
               "size": 3,
               "image": "assets/wyvern.png"
+              "spawns": [
+  { "x": 50, "y": 50 }
+]
             }
           ]
         }
