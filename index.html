@@ -10,7 +10,7 @@
   <header class="topbar">
     <div class="brand">
       <div class="brand__title">Arenas of The Scarlett Isles</div>
-      <div class="brand__subtitle">Arena skill challenges + draggable tokens</div>
+      <div class="brand__subtitle">POV arena mini-games (skill + attack + cinematic overlays)</div>
     </div>
 
     <div class="controls">
@@ -29,36 +29,40 @@
 
       <div class="divider"></div>
 
-      <label class="field field--slim">
-        <span>Grid</span>
-        <input id="gridToggle" type="checkbox" checked />
-      </label>
-      <label class="field field--slim">
-        <span>Size</span>
-        <input id="gridSize" type="range" min="30" max="120" value="70" />
-      </label>
-      <button id="resetPositionsBtn" class="btn btn--ghost">Reset Tokens</button>
-<button id="restartRoundBtn" class="btn btn--ghost">Restart Round</button>
-<button id="restartArenaBtn" class="btn btn--ghost">Back to Start</button>
-<button id="resetRunBtn" class="btn btn--ghost">Reset Run</button>
+      <button id="backToStartBtn" class="btn btn--ghost">Back to Start</button>
+      <button id="resetRunBtn" class="btn btn--ghost">Reset Run</button>
     </div>
   </header>
 
   <main class="layout">
     <section class="mapPanel">
-      <div id="mapViewport" class="mapViewport">
-        <img id="mapImage" class="mapImage" alt="Arena battlemap" />
-        <div id="gridOverlay" class="gridOverlay"></div>
-        <div id="tokenLayer" class="tokenLayer" aria-label="Tokens layer"></div>
+      <div id="sceneViewport" class="sceneViewport">
+        <img id="sceneBase" class="sceneBase" alt="Arena scene" />
+        <img id="sceneBoss" class="sceneBoss hidden" alt="Boss overlay" />
+        <img id="sceneOverlay" class="sceneOverlay hidden" alt="Cinematic overlay" />
+
+        <div id="turnDock" class="turnDock hidden" aria-label="Turn panel">
+          <div class="dockHeader">
+            <div>
+              <div id="dockTitle" class="dockTitle">Turn</div>
+              <div id="dockSub" class="dockSub"></div>
+            </div>
+            <button id="dockClose" class="iconBtn" aria-label="Close">✕</button>
+          </div>
+          <div id="dockBody" class="dockBody"></div>
+          <div id="dockActions" class="dockActions"></div>
+        </div>
       </div>
 
       <div class="mapFooter">
-        <div class="pill" id="statusPill">Pick an arena, add players, then Enter The Arena.</div>
+        <div class="pill" id="statusPill">Add players, then Enter The Arena.</div>
         <div class="pill pill--right">
           <span class="muted">Gold:</span> <strong id="goldTotal">0</strong>
           <span class="muted">|</span>
           <span class="muted">Success:</span> <strong id="succCount">0</strong>/<span id="succTarget">0</span>
           <span class="muted">Fail:</span> <strong id="failCount">0</strong>/<span id="failMax">0</span>
+          <span class="muted">|</span>
+          <span class="muted">Turn:</span> <strong id="turnCount">0</strong>
         </div>
       </div>
     </section>
@@ -70,7 +74,7 @@
       </div>
 
       <div class="panelBlock">
-        <div class="panelTitle">Enemies</div>
+        <div class="panelTitle">Opponents</div>
         <div id="enemyList" class="list"></div>
       </div>
 
@@ -78,29 +82,14 @@
         <div class="panelTitle">Round Console</div>
         <div class="console" id="console"></div>
         <div class="consoleActions">
-          <button id="openRoundRulesBtn" class="btn btn--ghost">View Round Rules</button>
-          <button id="nextTurnBtn" class="btn btn--primary">Play Turn</button>
-<button id="endRoundBtn" class="btn btn--ghost">End Round</button>
-<button id="forfeitBtn" class="btn btn--danger">Forfeit</button>
+          <button id="viewRulesBtn" class="btn btn--ghost">View Rules</button>
+          <button id="playTurnBtn" class="btn btn--primary">Play Turn</button>
+          <button id="endRoundBtn" class="btn btn--ghost">End Round</button>
+          <button id="forfeitBtn" class="btn btn--danger">Forfeit</button>
         </div>
       </div>
     </aside>
   </main>
-
-  <!-- MODALS -->
-  <div id="modalBackdrop" class="backdrop hidden"></div>
-
-  <div id="modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
-    <div class="modalHeader">
-      <div>
-        <div id="modalTitle" class="modalTitle">Modal</div>
-        <div id="modalSubtitle" class="modalSubtitle"></div>
-      </div>
-      <button id="modalClose" class="iconBtn" aria-label="Close">✕</button>
-    </div>
-    <div id="modalBody" class="modalBody"></div>
-    <div id="modalActions" class="modalActions"></div>
-  </div>
 
   <template id="tplAddPlayer">
     <form class="form" id="addPlayerForm">
@@ -116,26 +105,15 @@
       </div>
 
       <label class="field">
-        <span>Token Image (optional)</span>
+        <span>Portrait (small thumbnail)</span>
         <input name="image" type="file" accept="image/*" />
-        <small class="hint">If omitted, a default ring token is used.</small>
+        <small class="hint">This is stored compressed to avoid iOS storage limits.</small>
       </label>
 
-      <div class="grid2">
-        <label class="field">
-          <span>Token Size</span>
-          <select name="size">
-            <option value="1" selected>Medium (1x1)</option>
-            <option value="2">Large (2x2)</option>
-            <option value="3">Huge (3x3)</option>
-          </select>
-        </label>
-
-        <label class="field">
-          <span>Tag (optional)</span>
-          <input name="tag" placeholder="e.g. Blue Team" />
-        </label>
-      </div>
+      <label class="field">
+        <span>Tag (optional)</span>
+        <input name="tag" placeholder="e.g. Blue Team" />
+      </label>
 
       <div class="row">
         <button class="btn btn--primary" type="submit">Add</button>
