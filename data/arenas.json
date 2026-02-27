@@ -3,340 +3,184 @@
     {
       "id": "swyth_salt_ring_trials",
       "name": "Swyth: The Salt-Ring Trials",
-      "description": "Five escalating arena rounds. Skill challenge mini-games with HP attrition, prizes, and enemy tokens.",
+      "description": "Four escalating rounds. POV arena scenes, individual turns, skill + attack mini-game, cinematic overlays, HP attrition, prizes.",
       "rounds": [
         {
           "id": "r1",
-          "title": "Round 1 \u2014 The Gate-Clash",
-          "map": "assets/maps/swyth_base_rounds_1_2.png",
+          "title": "Round 1 — The Gate-Clash",
+          "scene": {
+            "base": "assets/maps/swyth_base_rounds_1_2.png",
+            "overlay_boss": null,
+            "overlays": {
+              "pc_hit": "assets/overlays/r1_hit.png",
+              "pc_fail": "assets/overlays/r1_fail.png"
+            }
+          },
           "reward_gp": 500,
           "skill_challenge": {
             "target_successes": 6,
             "max_failures": 3,
             "damage_on_failure": "2d6",
-            "enemy_damage_on_success": true,
-             "success_damage": { "easy": "1d8", "standard": "2d8", "hard": "3d8" },
+            "dcs": { "easy": 13, "standard": 15, "hard": 17 },
+            "turn_limit": 6,
+            "overtime": {
+              "failure_each_turn": 0,
+              "party_damage_each_turn": "1d6"
+            },
             "notes": [
-              "Team skill challenge. Each active player rolls once per turn.",
-              "Reach 6 successes before 3 failures. Each failure deals 2d6 damage to the player who failed.",
-              "Pick an approach, choose DC (Easy/Standard/Hard), enter your modifier, then roll d20."
+              "Individual turns. One player acts per turn.",
+              "On your turn: make a Skill check for a success/failure, then make an Attack roll to deal damage if you hit.",
+              "Win: reach 6 successes. Lose: reach 3 failures."
             ],
             "actions": [
-              {
-                "id": "athletics",
-                "label": "Drive them back (Athletics)"
-              },
-              {
-                "id": "acrobatics",
-                "label": "Footwork & feints (Acrobatics)"
-              },
-              {
-                "id": "intimidation",
-                "label": "Break morale (Intimidation)"
-              },
-              {
-                "id": "perception",
-                "label": "Read the tells (Perception)"
-              },
-              {
-                "id": "deception",
-                "label": "Bait an opening (Deception)"
-              },
-              {
-                "id": "performance",
-                "label": "Win the crowd (Performance)"
-              }
-            ],
-            "dcs": {
-              "easy": 13,
-              "standard": 14,
-              "hard": 16
-            }
+              { "id": "athletics", "label": "Drive them back (Athletics)" },
+              { "id": "acrobatics", "label": "Footwork & feints (Acrobatics)" },
+              { "id": "intimidation", "label": "Break morale (Intimidation)" },
+              { "id": "perception", "label": "Read the tells (Perception)" },
+              { "id": "deception", "label": "Bait an opening (Deception)" },
+              { "id": "performance", "label": "Win the crowd (Performance)" }
+            ]
+          },
+          "attack": {
+            "hit_dc": 14,
+            "default_damage": "2d8"
           },
           "enemies": [
-            {
-              "name": "Arena Duelist",
-              "count": 2,
-              "token": "enemy",
-              "hp": 45,
-              "size": 1,
-              "spawns": [
-    { "x": 68, "y": 32 },
-    { "x": 72, "y": 40 }
-              ]
-            },
-            {
-              "name": "Referee",
-              "count": 1,
-              "token": "npc",
-              "hp": 1,
-              "size": 1,
-              "locked": true,
-              "spawns": [
-  { "x": 62, "y": 46 }
-]
-            }
+            { "id": "duelist", "name": "Arena Duelist", "count": 2, "hp": 45 }
           ]
         },
-        {
-          "id": "r2",
-          "title": "Round 2 \u2014 The Salt-Sprint",
-          "map": "assets/maps/swyth_base_rounds_1_2.png",
-          "reward_gp": 1000,
-          "skill_challenge": {
-            "target_successes": 7,
-            "max_failures": 3,
-            "damage_on_failure": "3d6",
-            "enemy_damage_on_success": false,
-            "notes": [
-              "Relay-style chaos: nets, caltrops, and shoves at full speed.",
-              "Each failure deals 3d6 damage to the failing player.",
-              "If you choose a high-risk stunt, pick Hard DC for a bigger narrative payoff."
-            ],
-            "actions": [
-              {
-                "id": "athletics",
-                "label": "Sprint & shoulder through (Athletics)"
-              },
-              {
-                "id": "acrobatics",
-                "label": "Vault & roll (Acrobatics)"
-              },
-              {
-                "id": "sleight",
-                "label": "Cut free / snag a marker (Sleight of Hand)"
-              },
-              {
-                "id": "survival",
-                "label": "Pick the safest line (Survival)"
-              },
-              {
-                "id": "medicine",
-                "label": "Patch a stumble mid-run (Medicine)"
-              }
-            ],
-            "dcs": {
-              "easy": 14,
-              "standard": 15,
-              "hard": 17
-            }
-          },
-          "enemies": [
-            {
-              "name": "Netter",
-              "count": 2,
-              "token": "enemy",
-              "hp": 1,
-              "size": 1,
-              "locked": true,
-              "spawns": [
-  { "x": 42, "y": 44 },
-  { "x": 62, "y": 46 }
-]
-            },
-            {
-              "name": "Caltrop Patch",
-              "count": 3,
-              "token": "hazard",
-              "hp": 1,
-              "size": 1,
-              "locked": true,
-              "spawns": [
-  { "x": 40, "y": 58 },
-  { "x": 52, "y": 52 },
-  { "x": 64, "y": 60 }
-]
-            }
-          ]
-        },
+
         {
           "id": "r3",
-          "title": "Round 3 \u2014 Pillars of Swyth",
-          "map": "assets/maps/swyth_pillars_round_3.png",
+          "title": "Round 2 — Pillars of Swyth",
+          "scene": {
+            "base": "assets/maps/swyth_pillars_round_3.png",
+            "overlay_boss": null,
+            "overlays": {
+              "pc_hit": "assets/overlays/r3_hit.png",
+              "pc_fail": "assets/overlays/r3_fail.png"
+            }
+          },
           "reward_gp": 2500,
           "skill_challenge": {
             "target_successes": 8,
             "max_failures": 3,
             "damage_on_failure": "4d6",
-            "enemy_damage_on_success": true,
-             "success_damage": { "easy": "1d8", "standard": "2d8", "hard": "3d8" },
+            "dcs": { "easy": 15, "standard": 16, "hard": 18 },
+            "turn_limit": 7,
+            "overtime": {
+              "failure_each_turn": 0,
+              "party_damage_each_turn": "1d8"
+            },
             "notes": [
-              "The pillars create blind angles and sudden impacts.",
-              "Each failure also adds 1 Pressure. At 3 Pressure, the next failure damage spikes to 6d6, then Pressure resets.",
-              "Use pillars as cover: stealth, baiting, and ambush moves shine here."
+              "The pillars break sightlines. Hesitation gets punished.",
+              "Failing a check hurts. Succeeding pushes them back into bad angles.",
+              "Win: 8 successes. Lose: 3 failures."
             ],
             "actions": [
-              {
-                "id": "stealth",
-                "label": "Disappear behind pillars (Stealth)"
-              },
-              {
-                "id": "investigation",
-                "label": "Find the weak angle (Investigation)"
-              },
-              {
-                "id": "acrobatics",
-                "label": "Rebound & reposition (Acrobatics)"
-              },
-              {
-                "id": "athletics",
-                "label": "Shove into stone (Athletics)"
-              },
-              {
-                "id": "arcana",
-                "label": "Sense the ring wards (Arcana)"
-              }
-            ],
-            "dcs": {
-              "easy": 15,
-              "standard": 16,
-              "hard": 18
-            }
+              { "id": "stealth", "label": "Disappear behind pillars (Stealth)" },
+              { "id": "investigation", "label": "Find the weak angle (Investigation)" },
+              { "id": "acrobatics", "label": "Rebound & reposition (Acrobatics)" },
+              { "id": "athletics", "label": "Shove into stone (Athletics)" },
+              { "id": "arcana", "label": "Sense the ring wards (Arcana)" }
+            ]
+          },
+          "attack": {
+            "hit_dc": 15,
+            "default_damage": "2d8"
           },
           "enemies": [
-            {
-              "name": "Pillar-Fighter",
-              "count": 3,
-              "token": "enemy",
-              "hp": 55,
-              "size": 1,
-              "spawns": [
-  { "x": 66, "y": 30 },
-  { "x": 72, "y": 34 },
-  { "x": 68, "y": 42 }
-]
-            }
+            { "id": "pillar_fighter", "name": "Pillar-Fighter", "count": 3, "hp": 55 }
           ]
         },
+
         {
           "id": "r4",
-          "title": "Round 4 \u2014 The Beast-Pen",
-          "map": "assets/maps/swyth_beast_pen_round_4.png",
+          "title": "Round 3 — The Beast-Pen",
+          "scene": {
+            "base": "assets/maps/swyth_beast_pen_round_4.png",
+            "overlay_boss": null,
+            "overlays": {
+              "pc_hit": "assets/overlays/r4_hit.png",
+              "pc_fail": "assets/overlays/r4_fail.png"
+            }
+          },
           "reward_gp": 5000,
           "skill_challenge": {
             "target_successes": 9,
             "max_failures": 3,
             "damage_on_failure": "5d6",
-            "enemy_damage_on_success": true,
-             "success_damage": { "easy": "1d8", "standard": "2d8", "hard": "3d8" },
+            "dcs": { "easy": 16, "standard": 17, "hard": 19 },
+            "turn_limit": 8,
+            "overtime": {
+              "failure_each_turn": 0,
+              "party_damage_each_turn": "1d10"
+            },
             "notes": [
-              "Beasts surge from pens. You can control them or outlast them.",
-              "Once per player this round: if you pick Animal Handling and Hard DC and succeed, you gain +2 successes (instead of +1).",
-              "Failures represent goring, bites, and fence slams (5d6)."
+              "Beasts surge from pens. You can control them or endure them.",
+              "Hard Animal Handling on a success counts as TWO successes once per player this round (tracked automatically).",
+              "Win: 9 successes. Lose: 3 failures."
             ],
             "actions": [
-              {
-                "id": "animal_handling",
-                "label": "Calm / redirect a beast (Animal Handling)"
-              },
-              {
-                "id": "nature",
-                "label": "Exploit instincts (Nature)"
-              },
-              {
-                "id": "athletics",
-                "label": "Wrestle / pin / hold a gate (Athletics)"
-              },
-              {
-                "id": "acrobatics",
-                "label": "Dodge through chaos (Acrobatics)"
-              },
-              {
-                "id": "intimidation",
-                "label": "Roar them back (Intimidation)"
-              }
-            ],
-            "dcs": {
-              "easy": 16,
-              "standard": 17,
-              "hard": 19
-            }
+              { "id": "animal_handling", "label": "Calm / redirect a beast (Animal Handling)", "special": "beast_bonus_once" },
+              { "id": "nature", "label": "Exploit instincts (Nature)" },
+              { "id": "athletics", "label": "Wrestle / pin / hold a gate (Athletics)" },
+              { "id": "acrobatics", "label": "Dodge through chaos (Acrobatics)" },
+              { "id": "intimidation", "label": "Roar them back (Intimidation)" }
+            ]
+          },
+          "attack": {
+            "hit_dc": 15,
+            "default_damage": "2d10"
           },
           "enemies": [
-            {
-              "name": "Razor-Boar",
-              "count": 1,
-              "token": "beast",
-              "hp": 95,
-              "size": 2,
-              "spawns": [
-  { "x": 68, "y": 34 }
-]
-            },
-            {
-              "name": "Hooked Hyena",
-              "count": 2,
-              "token": "beast",
-              "hp": 55,
-              "size": 1,
-              "spawns": [
-  { "x": 72, "y": 40 },
-  { "x": 62, "y": 42 }
-]
-            }
+            { "id": "razor_boar", "name": "Razor-Boar", "count": 1, "hp": 95 },
+            { "id": "hooked_hyena", "name": "Hooked Hyena", "count": 2, "hp": 55 }
           ]
         },
+
         {
           "id": "r5",
-          "title": "Round 5 \u2014 Wyvern Rite (Finale)",
-          "map": "assets/maps/swyth_wyvern_rite_round_5.png",
+          "title": "Round 4 — Wyvern Rite (Finale)",
+          "scene": {
+            "base": "assets/maps/swyth_wyvern_rite_round_5.png",
+            "overlay_boss": "assets/wyvern.png",
+            "overlays": {
+              "pc_hit": "assets/overlays/r5_hit.png",
+              "pc_fail": "assets/wyvern_slash.png",
+              "pc_fail_heavy": "assets/wyvern_tail-strike.png"
+            }
+          },
           "reward_gp": 50000,
           "skill_challenge": {
             "target_successes": 12,
             "max_failures": 2,
             "damage_on_failure": "8d6",
-            "enemy_damage_on_success": true,
-             "success_damage": { "easy": "1d8", "standard": "2d8", "hard": "3d8" },
+            "dcs": { "easy": 17, "standard": 18, "hard": 20 },
+            "turn_limit": 8,
+            "overtime": {
+              "failure_each_turn": 1,
+              "party_damage_each_turn": "2d8"
+            },
             "notes": [
               "Almost impossible by design. Two failures ends the run.",
-              "Team Special: once per turn, ONE player may choose 'Work the winch'. On success, DCs reduce by 1 next turn (minimum Easy DC 14).",
-              "Reach 12 successes to claim the ludicrous purse."
+              "Each turn is a single player’s moment: skill check + attack.",
+              "Overtime is brutal: the crowd and the rite turn against you."
             ],
             "actions": [
-              {
-                "id": "athletics",
-                "label": "Hold the line (Athletics)"
-              },
-              {
-                "id": "acrobatics",
-                "label": "Evade the dive (Acrobatics)"
-              },
-              {
-                "id": "perception",
-                "label": "Read the wings (Perception)"
-              },
-              {
-                "id": "survival",
-                "label": "Predict strike path (Survival)"
-              },
-              {
-                "id": "arcana",
-                "label": "Disrupt the rite glyph (Arcana)"
-              },
-              {
-                "id": "winch",
-                "label": "Work the winch (Strength check) \u2014 Team once/turn",
-                "special": "team_once"
-              }
-            ],
-            "dcs": {
-              "easy": 17,
-              "standard": 18,
-              "hard": 20
-            }
+              { "id": "athletics", "label": "Hold the line (Athletics)" },
+              { "id": "acrobatics", "label": "Evade the dive (Acrobatics)" },
+              { "id": "perception", "label": "Read the wings (Perception)" },
+              { "id": "survival", "label": "Predict strike path (Survival)" },
+              { "id": "arcana", "label": "Disrupt the rite glyph (Arcana)" }
+            ]
+          },
+          "attack": {
+            "hit_dc": 16,
+            "default_damage": "3d10"
           },
           "enemies": [
-            {
-              "name": "Wyvern",
-              "count": 1,
-              "token": "wyvern",
-              "hp": 200,
-              "size": 3,
-              "image": "assets/wyvern.png",
-              "spawns": [
-  { "x": 50, "y": 50 }
-]
-            }
+            { "id": "wyvern", "name": "Wyvern", "count": 1, "hp": 200 }
           ]
         }
       ]
