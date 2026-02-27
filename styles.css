@@ -1,4 +1,3 @@
-
 :root{
   --bg:#0b0b0c;
   --ink:#f3f0e8;
@@ -21,6 +20,7 @@ body{
   color:var(--ink);
   font-family:var(--sans);
 }
+
 .topbar{
   position:sticky; top:0; z-index:10;
   display:flex; align-items:center; justify-content:space-between;
@@ -33,9 +33,9 @@ body{
 .brand__subtitle{ color:var(--muted); font-size:12px; margin-top:2px; }
 .controls{ display:flex; flex-wrap:wrap; align-items:flex-end; gap:10px; }
 .divider{ width:1px; height:34px; background:var(--line); margin:0 6px; }
+
 .field{ display:flex; flex-direction:column; gap:6px; font-size:12px; color:var(--muted); }
-.field input[type="range"]{ width:120px; }
-.field--slim{ min-width:90px; }
+
 select,input{
   background: rgba(255,255,255,.04);
   color: var(--ink);
@@ -48,6 +48,7 @@ select:focus,input:focus{
   border-color: rgba(217,179,95,.55);
   box-shadow: 0 0 0 4px rgba(217,179,95,.12);
 }
+
 .btn{
   border:1px solid var(--line);
   background: rgba(255,255,255,.05);
@@ -70,6 +71,7 @@ select:focus,input:focus{
   border-color: rgba(210,61,61,.75);
 }
 .btn--ghost{ background: transparent; }
+
 .iconBtn{
   background: transparent;
   border: 1px solid var(--line);
@@ -78,12 +80,14 @@ select:focus,input:focus{
   padding: 8px 10px;
   cursor:pointer;
 }
+
 .layout{
   display:grid;
   grid-template-columns: 1fr 360px;
   gap:14px;
   padding:14px;
 }
+
 .mapPanel{
   background: linear-gradient(180deg, rgba(18,18,20,.68), rgba(18,18,20,.40));
   border:1px solid var(--line);
@@ -94,7 +98,8 @@ select:focus,input:focus{
   flex-direction:column;
   min-height: calc(100vh - 88px);
 }
-.mapViewport{
+
+.sceneViewport{
   position:relative;
   flex:1;
   background: rgba(0,0,0,.35);
@@ -103,7 +108,8 @@ select:focus,input:focus{
   justify-content:center;
   overflow:hidden;
 }
-.mapImage{
+
+.sceneBase{
   width:100%;
   height:100%;
   object-fit:contain;
@@ -111,13 +117,32 @@ select:focus,input:focus{
   user-select:none;
   pointer-events:none;
 }
-.gridOverlay{
-  position:absolute; inset:0;
+
+.sceneBoss{
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:100%;
+  object-fit:contain;
   pointer-events:none;
-  opacity:.70;
-  mix-blend-mode: normal;
+  opacity:.95;
+  filter: drop-shadow(0 16px 30px rgba(0,0,0,.55));
 }
-.tokenLayer{ position:absolute; inset:0; }
+
+.sceneOverlay{
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:100%;
+  object-fit:contain;
+  pointer-events:none;
+  opacity:0;
+  transform: scale(1);
+  transition: opacity 120ms ease;
+  filter: drop-shadow(0 18px 40px rgba(0,0,0,.65));
+}
+.sceneOverlay.show{ opacity:1; }
+
 .mapFooter{
   display:flex; gap:10px;
   padding:10px;
@@ -158,6 +183,7 @@ select:focus,input:focus{
   padding:10px;
 }
 .cardRow{ display:flex; justify-content:space-between; align-items:center; gap:10px; }
+
 .badge{
   font-size:11px;
   padding:3px 8px;
@@ -165,6 +191,7 @@ select:focus,input:focus{
   border:1px solid var(--line);
   color: var(--muted);
 }
+
 .hpBar{
   height:9px;
   background: rgba(255,255,255,.06);
@@ -178,6 +205,17 @@ select:focus,input:focus{
 .smallBtns{ display:flex; gap:6px; flex-wrap:wrap; margin-top:8px; }
 .smallBtns .btn{ padding:7px 9px; border-radius: 12px; font-size:12px; }
 
+.portraitRow{
+  display:flex; gap:10px; align-items:center;
+}
+.portrait{
+  width:34px; height:34px;
+  border-radius: 10px;
+  border:1px solid rgba(255,255,255,.12);
+  object-fit:cover;
+  background: rgba(0,0,0,.35);
+}
+
 .console{
   font-family: var(--mono);
   font-size: 12px;
@@ -190,96 +228,47 @@ select:focus,input:focus{
   padding:10px;
   white-space: pre-wrap;
 }
-.consoleActions{ display:flex; gap:8px; margin-top:10px; }
+.consoleActions{ display:flex; gap:8px; margin-top:10px; flex-wrap:wrap; }
 
-.token{
+/* TURN DOCK (left-side mini-game panel) */
+.turnDock{
   position:absolute;
-  width:64px; height:64px;
-  transform: translate(-50%, -50%);
-  border-radius: 14px;
-  cursor: grab;
-  user-select:none;
-  touch-action:none;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-}
-.token:active{ cursor:grabbing; }
-.token__img{
-  width:100%; height:100%;
-  border-radius: 14px;
-  object-fit: cover;
-  border: 2px solid rgba(0,0,0,.55);
-box-shadow: 0 10px 25px rgba(0,0,0,.45);
-}
-.token__label{
-  position:absolute;
-  bottom:-22px;
-  font-size:12px;
-  background: rgba(0,0,0,.55);
-border:1px solid rgba(255,255,255,.12);
-  color: var(--ink);
-  padding:3px 8px;
-  border-radius: 999px;
-  max-width: 180px;
-  overflow:hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  pointer-events:none;
-}
-.token__hp{
-  position:absolute;
-  top:-12px;
-  font-size:11px;
- background: rgba(161,31,43,.75);
-border:1px solid rgba(255,255,255,.14);
-  color: #fff;
-  padding:2px 7px;
-  border-radius: 999px;
-  pointer-events:none;
-}
-
-.backdrop{
-  position:fixed; inset:0;
-  background: rgba(0,0,0,.6);
-  backdrop-filter: blur(6px);
-  z-index:50;
-}
-.modal{
-  position:fixed;
-  top:50%; left:50%;
-  transform: translate(-50%, -50%);
-  width:min(760px, calc(100vw - 28px));
-  max-height: calc(100vh - 28px);
-  overflow:auto;
-  background: linear-gradient(180deg, rgba(18,18,20,.98), rgba(18,18,20,.86));
-border:1px solid rgba(255,255,255,.12);
+  left:14px;
+  top:14px;
+  bottom:14px;
+  width:min(440px, calc(100% - 28px));
+  background: linear-gradient(180deg, rgba(18,18,20,.96), rgba(18,18,20,.82));
+  border:1px solid rgba(255,255,255,.12);
   border-radius: 22px;
   box-shadow: var(--shadow);
-  z-index:60;
-}
-.modalHeader{
   display:flex;
-  justify-content:space-between;
+  flex-direction:column;
+  overflow:hidden;
+}
+.dockHeader{
+  display:flex;
   align-items:flex-start;
-  gap:14px;
-  padding:14px 14px 10px 14px;
+  justify-content:space-between;
+  gap:10px;
+  padding:12px 12px 10px 12px;
   border-bottom:1px solid var(--line);
 }
-.modalTitle{ font-weight:950; font-size:18px; }
-.modalSubtitle{ color:var(--muted); font-size:13px; margin-top:3px; }
-.modalBody{ padding:14px; }
-.modalActions{
+.dockTitle{ font-weight:950; font-size:16px; }
+.dockSub{ color:var(--muted); font-size:12px; margin-top:3px; }
+.dockBody{ padding:12px; overflow:auto; }
+.dockActions{
   display:flex;
   gap:10px;
-  padding:12px 14px 14px 14px;
+  padding:12px;
   border-top:1px solid var(--line);
   justify-content:flex-end;
   flex-wrap:wrap;
 }
+
 .hidden{ display:none !important; }
 .form{ display:flex; flex-direction:column; gap:12px; }
 .grid2{ display:grid; grid-template-columns: 1fr 1fr; gap:10px; }
+.grid3{ display:grid; grid-template-columns: 1fr 1fr 1fr; gap:10px; }
 .row{ display:flex; gap:10px; justify-content:flex-end; flex-wrap:wrap; }
 .hint{ color:var(--muted); display:block; margin-top:6px; font-size:12px; }
 .kbd{
@@ -290,9 +279,14 @@ border:1px solid rgba(255,255,255,.12);
   border-radius: 10px;
   font-size: 12px;
 }
+
 @media (max-width: 1024px){
   .layout{ grid-template-columns: 1fr; }
   .sidePanel{ min-height: 520px; }
+  .turnDock{
+    left:10px; right:10px;
+    width:auto;
+  }
 }
 
 /* Ensure dropdown options are readable across browsers */
