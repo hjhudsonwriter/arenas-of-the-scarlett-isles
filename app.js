@@ -1,15 +1,14 @@
-/* Arenas of The Scarlett Isles
-   GitHub Pages single-page app:
-   - Map viewer with adjustable grid
-   - Draggable player & enemy tokens
-   - Arena rounds as skill-challenge mini-games:
-     Round start rules modal -> per-turn roll modal -> end-of-round summary modal -> next round
+/* Arenas of The Scarlett Isles (POV Mini-Game)
+   - No tokens, no grid
+   - Players tracked in sidebar (name, portrait, HP)
+   - Individual turns: Skill roll -> Attack roll -> Resolve
+   - Cinematic overlays on hit/fail
 */
 
 const $ = (sel, el=document) => el.querySelector(sel);
 const $$ = (sel, el=document) => Array.from(el.querySelectorAll(sel));
 
-const STORAGE_KEY = "tsi_arenas_state_v2";
+const STORAGE_KEY = "tsi_arenas_state_v3_pov";
 
 const state = {
   arenas: [],
@@ -18,28 +17,26 @@ const state = {
 
   // persistent
   players: [],
-  positions: {},
-  gridEnabled: true,
-  gridSize: 70,
   totalGold: 0,
 
   // run state
   runActive: false,
-  turn: 1,
+  turn: 0,
   successes: 0,
   failures: 0,
-  pressure: 0,
-  dcModifier: 0,
-  enemies: [],
+  enemies: [], // {id,name,hp,maxHp,defId}
 };
 
 function uid(prefix="id"){
   return `${prefix}_${Math.random().toString(16).slice(2)}_${Date.now().toString(16)}`;
 }
-function clamp(n, a, b){ return Math.max(a, Math.min(b, n)); }
+function clamp(n,a,b){ return Math.max(a, Math.min(b,n)); }
 
-async function fileToSmallDataURL(file, maxSize=128, quality=0.75){
-  // Convert an image file to a small compressed dataURL (webp if possible).
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+}
+
+async function fileToSmallDataURL(file, maxSize=128, quality=0.78){
   const dataUrl = await new Promise((resolve, reject)=>{
     const r = new FileReader();
     r.onload = ()=>resolve(r.result);
@@ -59,42 +56,37 @@ async function fileToSmallDataURL(file, maxSize=128, quality=0.75){
   const h = Math.max(1, Math.round(img.height * scale));
 
   const canvas = document.createElement("canvas");
-  canvas.width = w;
-  canvas.height = h;
+  canvas.width = w; canvas.height = h;
   const ctx = canvas.getContext("2d");
   ctx.drawImage(img, 0, 0, w, h);
 
-  try{
-    return canvas.toDataURL("image/webp", quality);
-  }catch(e){
-    return canvas.toDataURL("image/png");
-  }
+  try{ return canvas.toDataURL("image/webp", quality); }
+  catch(e){ return canvas.toDataURL("image/png"); }
 }
+
 function save(){
+  // Keep storage lean: portraits are already compressed.
   const payload = {
-    players: state.players,
-    positions: state.positions,
-    gridEnabled: state.gridEnabled,
-    gridSize: state.gridSize,
-    totalGold: state.totalGold
+    players: state.players.map(p=>({id:p.id,name:p.name,tag:p.tag,maxHp:p.maxHp,hp:p.hp,image:p.image||""})),
+    totalGold: state.totalGold,
+    arenaId: state.arenaId,
+    roundId: state.roundId
   };
 
   try{
     localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
     return true;
   }catch(err){
-    // If quota exceeded, strip images and try once more.
     if(String(err).includes("QuotaExceeded")){
+      // Drop portraits if absolutely necessary
       const slim = JSON.parse(JSON.stringify(payload));
-      for(const p of (slim.players||[])){
-        if(p.image && String(p.image).startsWith("data:")) p.image = "";
-      }
+      for(const p of slim.players){ p.image = ""; }
       try{
         localStorage.setItem(STORAGE_KEY, JSON.stringify(slim));
-        console.warn("Storage quota exceeded: saved without player images.");
-        return false; // saved, but images were dropped
+        console.warn("Quota exceeded: saved without portraits.");
+        return false;
       }catch(e2){
-        console.error("Still exceeded quota after slimming:", e2);
+        console.error("Save failed:", e2);
         return false;
       }
     }
@@ -109,10 +101,9 @@ function load(){
     if(!raw) return;
     const p = JSON.parse(raw);
     state.players = p.players || [];
-    state.positions = p.positions || {};
-    state.gridEnabled = p.gridEnabled ?? true;
-    state.gridSize = p.gridSize ?? 70;
     state.totalGold = p.totalGold ?? 0;
+    state.arenaId = p.arenaId ?? null;
+    state.roundId = p.roundId ?? null;
   }catch(e){
     console.warn("Load failed", e);
   }
@@ -125,6 +116,8 @@ function log(msg){
   c.scrollTop = c.scrollHeight;
 }
 
+function setStatus(text){ $("#statusPill").textContent = text; }
+
 function getArena(){
   return state.arenas.find(a => a.id === state.arenaId) || null;
 }
@@ -134,17 +127,19 @@ function getRound(){
   return a.rounds.find(r => r.id === state.roundId) || a.rounds[0] || null;
 }
 
-function setStatus(text){ $("#statusPill").textContent = text; }
-
-function setGrid(){
-  const overlay = $("#gridOverlay");
-  overlay.style.display = state.gridEnabled ? "block" : "none";
-  const s = state.gridSize;
-  overlay.style.backgroundSize = `${s}px ${s}px`;
-  overlay.style.backgroundImage = `
-    linear-gradient(to right, rgba(255,255,255,.34) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(255,255,255,.34) 1px, transparent 1px)
-  `;
+function rollDice(expr){
+  const m = String(expr||"").trim().match(/^(\d+)d(\d+)$/i);
+  if(!m) return {total:0, rolls:[], expr:String(expr||"")};
+  const c = parseInt(m[1],10);
+  const s = parseInt(m[2],10);
+  let total = 0;
+  const rolls = [];
+  for(let i=0;i<c;i++){
+    const r = 1 + Math.floor(Math.random()*s);
+    rolls.push(r);
+    total += r;
+  }
+  return {total, rolls, expr:`${c}d${s}`};
 }
 
 function renderSelects(){
@@ -156,6 +151,7 @@ function renderSelects(){
     opt.textContent = a.name;
     arenaSel.appendChild(opt);
   }
+  if(!state.arenaId) state.arenaId = state.arenas[0]?.id || null;
   arenaSel.value = state.arenaId;
 
   const roundSel = $("#roundSelect");
@@ -168,18 +164,12 @@ function renderSelects(){
       opt.textContent = r.title;
       roundSel.appendChild(opt);
     }
+    if(!state.roundId) state.roundId = a.rounds[0]?.id || null;
     roundSel.value = state.roundId;
   }
 }
 
-function renderMap(){
-  const r = getRound();
-  if(!r) return;
-  $("#mapImage").src = r.map;
-  renderRunStats();
-}
-
-function renderRunStats(){
+function renderHeaderStats(){
   const r = getRound();
   const sc = r?.skill_challenge;
   $("#goldTotal").textContent = String(state.totalGold);
@@ -187,134 +177,45 @@ function renderRunStats(){
   $("#failCount").textContent = String(state.failures);
   $("#succTarget").textContent = String(sc?.target_successes ?? 0);
   $("#failMax").textContent = String(sc?.max_failures ?? 0);
+  $("#turnCount").textContent = String(state.turn);
 }
 
-function escapeHtml(s){
-  return String(s).replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
-}
+function setScene(){
+  const r = getRound();
+  if(!r) return;
 
-function computeTokenPx(size){
-  if(size === 3) return 128;
-  if(size === 2) return 96;
-  return 64;
-}
-
-function ensurePos(id, kind){
-  if(state.positions[id]) return state.positions[id];
-  const baseX = kind === "player" ? 35 : 65;
-  const spread = kind === "player" ? 12 : 18;
-  const idx = Object.keys(state.positions).length % 6;
-  const pos = { x: clamp(baseX + (idx-2)*spread, 8, 92), y: clamp(75 + ((idx%3)-1)*9, 10, 92) };
-  state.positions[id] = pos;
-  return pos;
-}
-
-function tokenSvg(fill){
-  const svg = `
-  <svg xmlns="http://www.w3.org/2000/svg" width="256" height="256">
-    <rect x="18" y="18" width="220" height="220" rx="28" fill="${fill}" opacity="0.95"/>
-    <rect x="28" y="28" width="200" height="200" rx="24" fill="rgba(0,0,0,0.25)"/>
-    <circle cx="128" cy="128" r="64" fill="rgba(255,255,255,0.18)"/>
-  </svg>`;
-  return "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg);
-}
-
-function enemyTokenImg(type){
-  if(type === "wyvern") return "assets/wyvern.png";
-  if(type === "beast") return tokenSvg("#d9b35f");
-  if(type === "hazard") return tokenSvg("#7c7c86");
-  if(type === "npc") return tokenSvg("#8aa7ff");
-  return tokenSvg("#a11f2b");
-}
-
-function enableDrag(el, locked){
-  if(locked) return;
-  const viewport = $("#mapViewport");
-  let dragging = false;
-
-  el.addEventListener("pointerdown", (e)=>{
-    if(e.button !== undefined && e.button !== 0) return;
-    dragging = true;
-    el.setPointerCapture?.(e.pointerId);
-  });
-
-  window.addEventListener("pointermove", (e)=>{
-    if(!dragging) return;
-    const rect = viewport.getBoundingClientRect();
-    const cx = clamp((e.clientX - rect.left) / rect.width, 0, 1);
-    const cy = clamp((e.clientY - rect.top) / rect.height, 0, 1);
-    const x = cx * 100;
-    const y = cy * 100;
-    el.style.left = x + "%";
-    el.style.top = y + "%";
-    state.positions[el.dataset.id] = {x,y};
-    save();
-  });
-
-  window.addEventListener("pointerup", ()=>{ dragging = false; });
-}
-
-function makeToken({id, name, img, size, hpText, locked, kind}){
-  const pos = ensurePos(id, kind);
-  const el = document.createElement("div");
-  el.className = "token";
-  el.dataset.id = id;
-  el.style.left = pos.x + "%";
-  el.style.top = pos.y + "%";
-  const px = computeTokenPx(size);
-  el.style.width = px + "px";
-  el.style.height = px + "px";
-
-  const im = document.createElement("img");
-  im.className = "token__img";
-  im.src = img;
-  im.alt = name;
-
-  const label = document.createElement("div");
-  label.className = "token__label";
-  label.textContent = name;
-
-  el.appendChild(im);
-  el.appendChild(label);
-
-  if(hpText){
-    const hp = document.createElement("div");
-    hp.className = "token__hp";
-    hp.textContent = hpText;
-    el.appendChild(hp);
+  $("#sceneBase").src = r.scene?.base || "";
+  const boss = $("#sceneBoss");
+  const bossSrc = r.scene?.overlay_boss || "";
+  if(bossSrc){
+    boss.src = bossSrc;
+    boss.classList.remove("hidden");
+  }else{
+    boss.classList.add("hidden");
+    boss.removeAttribute("src");
   }
 
-  enableDrag(el, locked);
-  return el;
+  hideOverlay();
 }
 
-function renderTokens(){
-  const layer = $("#tokenLayer");
-  layer.innerHTML = "";
+let overlayTimer = null;
+function showOverlay(src, ms=800){
+  if(!src) return;
+  const el = $("#sceneOverlay");
+  el.src = src;
+  el.classList.remove("hidden");
+  requestAnimationFrame(()=> el.classList.add("show"));
 
-  for(const p of state.players){
-    layer.appendChild(makeToken({
-      id: p.id,
-      name: p.name,
-      img: p.image || "assets/tokens/ring.png",
-      size: p.size,
-      hpText: `${p.hp}`,
-      locked: false,
-      kind: "player"
-    }));
-  }
-
-  for(const e of state.enemies){
-    layer.appendChild(makeToken({
-      id: e.id,
-      name: e.name,
-      img: e.image || enemyTokenImg(e.token),
-      size: e.size || 1,
-      hpText: e.maxHp ? `${e.hp}` : "",
-      locked: !!e.locked,
-      kind: "enemy"
-    }));
-  }
+  if(overlayTimer) clearTimeout(overlayTimer);
+  overlayTimer = setTimeout(()=> hideOverlay(), ms);
+}
+function hideOverlay(){
+  const el = $("#sceneOverlay");
+  el.classList.remove("show");
+  setTimeout(()=>{
+    el.classList.add("hidden");
+    el.removeAttribute("src");
+  }, 150);
 }
 
 function renderPartyList(){
@@ -330,12 +231,13 @@ function renderPartyList(){
     card.className = "card";
     const hpPct = Math.max(0, Math.min(1, p.hp / p.maxHp));
     card.innerHTML = `
-      <div class="cardRow">
-        <div>
-          <div><strong>${escapeHtml(p.name)}</strong> ${p.tag ? `<span class="badge">${escapeHtml(p.tag)}</span>` : ""}</div>
+      <div class="cardRow portraitRow">
+        <img class="portrait" src="${p.image ? escapeHtml(p.image) : ""}" alt="" />
+        <div style="flex:1;">
+          <div><strong>${escapeHtml(p.name)}</strong> ${p.tag ? `<span class="badge">${escapeHtml(p.tag)}</span>`:""}</div>
           <div class="muted" style="font-size:12px;margin-top:2px;">HP ${p.hp}/${p.maxHp}</div>
         </div>
-        <div class="badge">Size ${p.size}x</div>
+        <div class="badge">d20</div>
       </div>
       <div class="hpBar"><div class="hpFill" style="width:${Math.round(hpPct*100)}%"></div></div>
       <div class="smallBtns">
@@ -352,453 +254,203 @@ function renderPartyList(){
     card.addEventListener("click", (e)=>{
       const t = e.target;
       if(!(t instanceof HTMLElement)) return;
+
       if(t.dataset.heal){
-        changeHp(p.id, parseInt(t.dataset.heal,10));
+        p.hp = clamp(p.hp + parseInt(t.dataset.heal,10), 0, p.maxHp);
+        save(); renderPartyList();
       }else if(t.dataset.dmg){
-        changeHp(p.id, -parseInt(t.dataset.dmg,10));
+        p.hp = clamp(p.hp - parseInt(t.dataset.dmg,10), 0, p.maxHp);
+        save(); renderPartyList();
       }else if(t.dataset.set !== undefined){
         const v = prompt(`Set HP for ${p.name} (0-${p.maxHp})`, String(p.hp));
         if(v === null) return;
         p.hp = clamp(parseInt(v,10)||0, 0, p.maxHp);
-        save(); renderPartyList(); renderTokens();
+        save(); renderPartyList();
       }else if(t.dataset.remove !== undefined){
         if(confirm(`Remove ${p.name}?`)){
           state.players = state.players.filter(x=>x.id !== p.id);
-          delete state.positions[p.id];
-          save(); renderPartyList(); renderTokens();
+          save(); renderPartyList();
         }
       }
     });
+  }
+}
+
+function spawnEnemiesForRound(round){
+  state.enemies = [];
+  for(const def of (round.enemies || [])){
+    for(let i=0;i<(def.count||1);i++){
+      const id = uid("e");
+      const name = (def.count||1) > 1 ? `${def.name} ${i+1}` : def.name;
+      state.enemies.push({
+        id,
+        defId: def.id || def.name,
+        name,
+        maxHp: def.hp ?? null,
+        hp: def.hp ?? null
+      });
+    }
   }
 }
 
 function renderEnemyList(){
   const host = $("#enemyList");
   host.innerHTML = "";
+  if(!state.runActive){
+    host.innerHTML = `<div class="card"><div class="muted">Opponents appear after you Enter The Arena.</div></div>`;
+    return;
+  }
   if(state.enemies.length === 0){
-    host.innerHTML = `<div class="card"><div class="muted">Enemies appear when you enter a round.</div></div>`;
+    host.innerHTML = `<div class="card"><div class="muted">No opponents remain.</div></div>`;
     return;
   }
 
   for(const e of state.enemies){
     const card = document.createElement("div");
     card.className = "card";
-    const hpPct = e.maxHp ? Math.max(0, Math.min(1, e.hp / e.maxHp)) : 1;
-    card.innerHTML = `
-      <div class="cardRow">
-        <div>
-          <div><strong>${escapeHtml(e.name)}</strong> ${e.locked ? `<span class="badge">Locked</span>` : ""}</div>
-          ${e.maxHp ? `<div class="muted" style="font-size:12px;margin-top:2px;">HP ${e.hp}/${e.maxHp}</div>` : `<div class="muted" style="font-size:12px;margin-top:2px;">Prop / Hazard</div>`}
+    if(e.maxHp){
+      const hpPct = Math.max(0, Math.min(1, e.hp / e.maxHp));
+      card.innerHTML = `
+        <div class="cardRow">
+          <div><strong>${escapeHtml(e.name)}</strong></div>
+          <div class="badge">HP ${e.hp}/${e.maxHp}</div>
         </div>
-        <div class="badge">Size ${e.size}x</div>
-      </div>
-      ${e.maxHp ? `<div class="hpBar"><div class="hpFill" style="width:${Math.round(hpPct*100)}%"></div></div>` : ""}
-      <div class="smallBtns">
-        ${e.maxHp ? `
+        <div class="hpBar"><div class="hpFill" style="width:${Math.round(hpPct*100)}%"></div></div>
+        <div class="smallBtns">
           <button class="btn btn--ghost" data-dmg="10">-10</button>
           <button class="btn btn--ghost" data-dmg="25">-25</button>
           <button class="btn btn--ghost" data-heal="10">+10</button>
           <button class="btn btn--ghost" data-set>Set HP</button>
-        ` : ""}
-        <button class="btn btn--danger" data-remove>Remove</button>
-      </div>
-    `;
+          <button class="btn btn--danger" data-remove>Remove</button>
+        </div>
+      `;
+    }else{
+      card.innerHTML = `
+        <div class="cardRow">
+          <div><strong>${escapeHtml(e.name)}</strong></div>
+          <div class="badge">Prop</div>
+        </div>
+        <div class="smallBtns">
+          <button class="btn btn--danger" data-remove>Remove</button>
+        </div>
+      `;
+    }
+
     host.appendChild(card);
 
     card.addEventListener("click", (ev)=>{
       const t = ev.target;
       if(!(t instanceof HTMLElement)) return;
+
       if(t.dataset.dmg && e.maxHp){
         e.hp = clamp(e.hp - parseInt(t.dataset.dmg,10), 0, e.maxHp);
-        renderEnemyList(); renderTokens();
+        renderEnemyList();
       }else if(t.dataset.heal && e.maxHp){
         e.hp = clamp(e.hp + parseInt(t.dataset.heal,10), 0, e.maxHp);
-        renderEnemyList(); renderTokens();
+        renderEnemyList();
       }else if(t.dataset.set !== undefined && e.maxHp){
         const v = prompt(`Set HP for ${e.name} (0-${e.maxHp})`, String(e.hp));
         if(v === null) return;
         e.hp = clamp(parseInt(v,10)||0, 0, e.maxHp);
-        renderEnemyList(); renderTokens();
+        renderEnemyList();
       }else if(t.dataset.remove !== undefined){
         state.enemies = state.enemies.filter(x=>x.id !== e.id);
-        delete state.positions[e.id];
-        renderEnemyList(); renderTokens();
+        renderEnemyList();
       }
     });
   }
 }
 
-function changeHp(pid, delta){
-  const p = state.players.find(x=>x.id===pid);
-  if(!p) return;
-  p.hp = clamp(p.hp + delta, 0, p.maxHp);
-  save();
-  renderPartyList();
-  renderTokens();
-}
-
-function rollDice(expr){
-  const m = String(expr).trim().match(/^(\d+)d(\d+)$/i);
-  if(!m) return {total:0, rolls:[], expr};
-  const c = parseInt(m[1],10);
-  const s = parseInt(m[2],10);
-  let total = 0;
-  const rolls = [];
-  for(let i=0;i<c;i++){
-    const r = 1 + Math.floor(Math.random()*s);
-    rolls.push(r);
-    total += r;
-  }
-  return {total, rolls, expr};
-}
-
-function showModal({title, subtitle="", bodyHtml="", actions=[]}){
-  $("#modalTitle").textContent = title;
-  $("#modalSubtitle").textContent = subtitle;
-  $("#modalBody").innerHTML = bodyHtml;
-
-  const host = $("#modalActions");
-  host.innerHTML = "";
-  for(const a of actions){
-    const b = document.createElement("button");
-    b.className = "btn" + (a.variant ? ` btn--${a.variant}` : "");
-    b.textContent = a.label;
-    b.addEventListener("click", ()=> a.onClick?.());
-    host.appendChild(b);
-  }
-
-  $("#modalBackdrop").classList.remove("hidden");
-  $("#modal").classList.remove("hidden");
-}
-function closeModal(){
-  $("#modalBackdrop").classList.add("hidden");
-  $("#modal").classList.add("hidden");
-  $("#modalBody").innerHTML = "";
-  $("#modalActions").innerHTML = "";
-}
-
-function roundRulesHtml(round){
-  const sc = round.skill_challenge;
-  const notes = (sc.notes||[]).map(n=>`<li>${escapeHtml(n)}</li>`).join("");
-  const actions = (sc.actions||[]).map(a=>`<li><strong>${escapeHtml(a.label)}</strong>${a.special==="team_once" ? ` <span class="badge">Team once/turn</span>`:""}</li>`).join("");
-  const dce = sc.dcs.easy + state.dcModifier;
-  const dcs = sc.dcs.standard + state.dcModifier;
-  const dch = sc.dcs.hard + state.dcModifier;
-
-  return `
-    <div class="card">
-      <div><strong>What you’re trying to do</strong></div>
-      <ul style="margin:8px 0 0 18px;">${notes}</ul>
-    </div>
-    <div style="height:10px"></div>
-    <div class="card">
-      <div class="cardRow">
-        <div><strong>Win Condition</strong></div>
-        <div class="badge">${sc.target_successes} successes</div>
-      </div>
-      <div class="cardRow" style="margin-top:8px;">
-        <div><strong>Lose Condition</strong></div>
-        <div class="badge">${sc.max_failures} failures</div>
-      </div>
-      <div style="margin-top:8px;color:var(--muted);font-size:13px;">
-        Failure damage: <span class="kbd">${escapeHtml(sc.damage_on_failure)}</span>
-      </div>
-    </div>
-    <div style="height:10px"></div>
-    <div class="card">
-      <div><strong>Approaches</strong></div>
-      <ul style="margin:8px 0 0 18px;">${actions}</ul>
-    </div>
-    <div style="height:10px"></div>
-    <div class="card">
-      <div><strong>DCs</strong></div>
-      <div style="margin-top:8px; display:flex; gap:10px; flex-wrap:wrap;">
-        <span class="badge">Easy ${dce}</span>
-        <span class="badge">Standard ${dcs}</span>
-        <span class="badge">Hard ${dch}</span>
-        ${state.pressure ? `<span class="badge">Pressure ${state.pressure}</span>`:""}
-      </div>
-    </div>
-  `;
-}
-
-function resetPlayersToMax(){
-  for(const p of state.players){
-    p.hp = p.maxHp;
-  }
-  save();
-  renderPartyList();
-  renderTokens();
-}
-
-function resetRunState(){
+function resetRunState(msg="Run reset."){
   state.runActive = false;
-  state.turn = 1;
+  state.turn = 0;
   state.successes = 0;
   state.failures = 0;
-  state.pressure = 0;
-  state.dcModifier = 0;
   state.enemies = [];
   renderEnemyList();
-  renderRunStats();
-  renderTokens();
-  setStatus("Run reset. Enter The Arena to start.");
-  log("Run reset.");
+  renderHeaderStats();
+  setStatus(msg);
+  log(msg);
+  hideDock();
 }
 
-function spawnEnemies(round){
-  state.enemies = [];
+function startRound(roundId){
+  const a = getArena();
+  if(!a) return;
+  const r = a.rounds.find(x=>x.id===roundId) || a.rounds[0];
+  state.roundId = r.id;
 
-  for(const def of (round.enemies||[])){
-    const sp = Array.isArray(def.spawns) ? def.spawns : [];
+  state.runActive = true;
+  state.turn = 0;
+  state.successes = 0;
+  state.failures = 0;
 
-    for(let i=0;i<def.count;i++){
-      const id = uid("e");
-      const name = def.count > 1 ? `${def.name} ${i+1}` : def.name;
-
-      state.enemies.push({
-        id,
-        name,
-        token: def.token || "enemy",
-        maxHp: def.hp ?? null,
-        hp: def.hp ?? null,
-        size: def.size ?? 1,
-        locked: !!def.locked,
-        image: def.image || null
-      });
-
-      // If spawns exist, use them (percent coords). Otherwise fallback.
-      const pos = sp[i] || sp[0] || null;
-      if(pos && typeof pos.x === "number" && typeof pos.y === "number"){
-        state.positions[id] = { x: clamp(pos.x, 4, 96), y: clamp(pos.y, 4, 96) };
-      }else{
-        ensurePos(id, "enemy");
-      }
-    }
+  // per-round flags
+  for(const p of state.players){
+    delete p._beastBonusUsed;
   }
+
+  spawnEnemiesForRound(r);
+  setScene();
+  renderEnemyList();
+  renderHeaderStats();
+
+  setStatus("Round loaded. Begin when ready.");
+  log(`--- ${r.title} loaded ---`);
+
+  openRulesDock(true);
 }
 
 function partyAlive(){
-  return state.players.some(p => p.hp > 0);
+  return state.players.some(p => (p.hp||0) > 0);
+}
+function enemiesAlive(){
+  return state.enemies.some(e => e.maxHp && e.hp > 0);
 }
 
-function openTurnModal(){
-  const round = getRound();
-  if(!round) return;
-  if(state.players.length === 0){
-    showModal({
-      title:"No players",
-      subtitle:"Add at least one player first.",
-      bodyHtml:`<div class="card"><div class="muted">Use <span class="kbd">Add Player</span> in the top bar.</div></div>`,
-      actions:[{label:"Close",variant:"ghost",onClick:closeModal}]
-    });
-    return;
-  }
-
+function applyFailureToPlayer(p, round){
   const sc = round.skill_challenge;
-  const dcEasy = Math.max(14, sc.dcs.easy + state.dcModifier);
-  const dcStd  = Math.max(15, sc.dcs.standard + state.dcModifier);
-  const dcHard = Math.max(16, sc.dcs.hard + state.dcModifier);
-
-  const actionOptions = sc.actions.map(a=>`<option value="${escapeHtml(a.id)}">${escapeHtml(a.label)}</option>`).join("");
-
-  const rows = state.players.map(p=>{
-    const disabled = p.hp <= 0 ? "disabled" : "";
-    return `
-      <div class="card" style="background:rgba(255,255,255,.02)">
-        <div class="cardRow">
-          <div><strong>${escapeHtml(p.name)}</strong> <span class="badge">HP ${p.hp}/${p.maxHp}</span></div>
-          <div class="badge">d20</div>
-        </div>
-        <div class="grid2" style="margin-top:10px;">
-          <label class="field">
-            <span>Approach</span>
-            <select data-action="${p.id}" ${disabled}>${actionOptions}</select>
-          </label>
-          <label class="field">
-            <span>DC</span>
-            <select data-dc="${p.id}" ${disabled}>
-              <option value="easy">Easy (${dcEasy})</option>
-              <option value="standard" selected>Standard (${dcStd})</option>
-              <option value="hard">Hard (${dcHard})</option>
-            </select>
-          </label>
-        </div>
-        <div class="grid2" style="margin-top:10px;">
-          <label class="field">
-            <span>Modifier</span>
-            <input type="number" data-mod="${p.id}" value="0" ${disabled}/>
-          </label>
-          <div class="field">
-            <span>Roll</span>
-            <button class="btn btn--primary" type="button" data-roll="${p.id}" ${disabled}>Roll d20</button>
-          </div>
-        </div>
-        <div class="muted" style="font-size:12px;margin-top:8px;" data-out="${p.id}">${p.hp<=0 ? "0 HP (skipped)":"No roll yet."}</div>
-      </div>
-    `;
-  }).join("");
-
-  showModal({
-    title:`${round.title}`,
-    subtitle:`Turn ${state.turn} | Success ${state.successes}/${sc.target_successes} | Fail ${state.failures}/${sc.max_failures}`,
-    bodyHtml:`
-      <div class="card">
-        <div class="cardRow">
-          <div><strong>Turn ${state.turn}</strong></div>
-          <div class="badge">DCs: Easy ${dcEasy} | Std ${dcStd} | Hard ${dcHard}</div>
-        </div>
-        <div style="margin-top:8px;color:var(--muted);font-size:13px;">
-          Everyone rolls once. A pass = +1 success. A fail = +1 failure and damage.
-        </div>
-        ${round.id==="r5" ? `<div class="muted" style="font-size:13px;margin-top:8px;">Team Special: <span class="kbd">Work the winch</span> can be attempted once per turn.</div>` : ""}
-        ${round.id==="r3" ? `<div class="muted" style="font-size:13px;margin-top:8px;">Pressure: <span class="kbd">${state.pressure}</span> (at 3, next failure spikes).</div>` : ""}
-      </div>
-      <div style="height:10px"></div>
-      <div class="card">
-        <div><strong>Rolls</strong></div>
-        <div style="display:flex;flex-direction:column;gap:10px;margin-top:10px;">${rows}</div>
-      </div>
-    `,
-    actions:[
-      {label:"Resolve Turn", variant:"primary", onClick: ()=> resolveTurn(round)},
-      {label:"Cancel", variant:"ghost", onClick: closeModal}
-    ]
-  });
-
-  const turnRolls = new Map(); // pid -> {pass, total, dc, actionId, dcLevel, d20, mod}
-
-  $$("#modalBody [data-roll]").forEach(btn=>{
-    btn.addEventListener("click", ()=>{
-      const pid = btn.getAttribute("data-roll");
-      const p = state.players.find(x=>x.id===pid);
-      if(!p || p.hp<=0) return;
-
-      const actionId = $(`#modalBody [data-action="${pid}"]`).value;
-      const dcLevel = $(`#modalBody [data-dc="${pid}"]`).value;
-      const mod = parseInt($(`#modalBody [data-mod="${pid}"]`).value || "0", 10);
-
-      const d20 = 1 + Math.floor(Math.random()*20);
-      const total = d20 + mod;
-
-      const baseDc = (dcLevel==="easy" ? sc.dcs.easy : dcLevel==="hard" ? sc.dcs.hard : sc.dcs.standard);
-      let dc = baseDc + state.dcModifier;
-
-      // keep minimums sane when DC modifier reduces
-      if(dcLevel==="easy") dc = Math.max(14, dc);
-      if(dcLevel==="standard") dc = Math.max(15, dc);
-      if(dcLevel==="hard") dc = Math.max(16, dc);
-
-      const pass = total >= dc;
-      turnRolls.set(pid, {pass, total, dc, actionId, dcLevel, d20, mod});
-
-      const out = $(`#modalBody [data-out="${pid}"]`);
-      out.innerHTML = pass
-        ? `✅ <span class="kbd">${d20}</span> + ${mod} = <strong>${total}</strong> vs DC ${dc}.`
-        : `❌ <span class="kbd">${d20}</span> + ${mod} = <strong>${total}</strong> vs DC ${dc}.`;
-    });
-  });
-
-  function resolveTurn(round){
-    // Verify rolls
-    for(const p of state.players){
-      if(p.hp<=0) continue;
-      if(!turnRolls.has(p.id)){
-        alert(`Missing roll for ${p.name}.`);
-        return;
-      }
-    }
-
-    const sc = round.skill_challenge;
-    let winchAttempted = false;
-    let winchSucceeded = false;
-
-    for(const p of state.players){
-      if(p.hp<=0) continue;
-      const rr = turnRolls.get(p.id);
-      if(!rr) continue;
-
-      // Round 5: winch team_once
-      if(round.id === "r5" && rr.actionId === "winch"){
-        if(winchAttempted){
-          log(`${p.name} tried the winch, but it was already attempted this turn.`);
-          continue;
-        }
-        winchAttempted = true;
-        if(rr.pass) winchSucceeded = true;
-      }
-
-      // Round 4: once per player, Hard Animal Handling grants +2 successes on pass
-      if(round.id === "r4" && rr.actionId === "animal_handling" && rr.dcLevel === "hard"){
-        if(rr.pass){
-          if(!p._beastBonusUsed){
-            state.successes += 2;
-            p._beastBonusUsed = true;
-            log(`${p.name} calmed/redirected a beast (Hard): +2 successes!`);
-          }else{
-            state.successes += 1;
-            log(`${p.name} succeeded (bonus already used): +1 success.`);
-          }
-        }else{
-          applyFailure(p, sc.damage_on_failure, round);
-        }
-        continue;
-      }
-
-      if(rr.pass){
-        state.successes += 1;
-        log(`${p.name} succeeded (${rr.dcLevel}).`);
-      }else{
-        applyFailure(p, sc.damage_on_failure, round);
-      }
-    }
-
-    if(round.id === "r5" && winchAttempted){
-      if(winchSucceeded){
-        // reduce dcModifier by 1 (more negative = easier), but cap so Easy DC won't go below 14
-        const cap = -(sc.dcs.easy - 14);
-        state.dcModifier = Math.max(state.dcModifier - 1, cap);
-        log(`WINCH SUCCESS: DCs reduce by 1 next turn.`);
-      }else{
-        log(`Winch failed. Chains bite back.`);
-      }
-    }
-
-    closeModal();
-    renderRunStats();
-    renderPartyList();
-    renderTokens();
-
-    const victory = state.successes >= sc.target_successes;
-    const defeat = state.failures >= sc.max_failures || !partyAlive();
-
-    if(victory) return endRound(true);
-    if(defeat) return endRound(false);
-
-    state.turn += 1;
-    setStatus(`Turn ${state.turn}. Click Play Turn.`);
-    log(`Turn ${state.turn} begins.`);
-    renderRunStats();
-  }
-}
-
-function applyFailure(player, damageExpr, round){
   state.failures += 1;
 
-  let expr = damageExpr;
-  if(round.id === "r3"){
-    state.pressure += 1;
-    if(state.pressure >= 3){
-      expr = "6d6";
-      state.pressure = 0;
-      log(`PRESSURE SPIKE triggered.`);
-    }
+  const dmg = rollDice(sc.damage_on_failure);
+  p.hp = clamp(p.hp - dmg.total, 0, p.maxHp);
+
+  const ov = round.scene?.overlays || {};
+  // Wyvern heavy failure: if damage big, swap overlay
+  if(round.id === "r5" && dmg.total >= 24 && ov.pc_fail_heavy){
+    showOverlay(ov.pc_fail_heavy, 1100);
+  }else{
+    showOverlay(ov.pc_fail, 850);
   }
 
-  const dmg = rollDice(expr);
-  player.hp = clamp(player.hp - dmg.total, 0, player.maxHp);
-  save();
-  log(`${player.name} failed: ${dmg.total} damage (${expr}: ${dmg.rolls.join(", ")}).`);
+  log(`${p.name} failed: -${dmg.total} HP (${dmg.expr}: ${dmg.rolls.join(", ")}).`);
+}
+
+function applyOvertimePressure(round){
+  const sc = round.skill_challenge;
+  const limit = sc.turn_limit || 0;
+  if(!limit) return;
+
+  if(state.turn <= limit) return;
+
+  const over = sc.overtime || {};
+  const extraFail = parseInt(over.failure_each_turn||0, 10) || 0;
+  const partyDmgExpr = over.party_damage_each_turn || "";
+
+  if(extraFail > 0){
+    state.failures += extraFail;
+    log(`OVERTIME: crowd turns. +${extraFail} failure(s).`);
+  }
+
+  if(partyDmgExpr){
+    const alive = state.players.filter(x=>x.hp>0);
+    if(alive.length){
+      const target = alive[Math.floor(Math.random()*alive.length)];
+      const dmg = rollDice(partyDmgExpr);
+      target.hp = clamp(target.hp - dmg.total, 0, target.maxHp);
+      log(`OVERTIME: ${target.name} is battered by the tempo: -${dmg.total} HP (${dmg.expr}).`);
+    }
+  }
 }
 
 function endRound(won){
@@ -814,36 +466,13 @@ function endRound(won){
   const partyHp = state.players.map(p => `${escapeHtml(p.name)}: <span class="kbd">${p.hp}/${p.maxHp}</span>`).join("<br/>");
   const next = getNextRoundId();
 
-  const actions = [];
-  if(won && next){
-    actions.push({
-      label:"Proceed to Next Round",
-      variant:"primary",
-      onClick: ()=>{
-        closeModal();
-        startRound(next, true);
-      }
-    });
-  }
-  actions.push({
-    label: won ? "Leave Arena" : "Leave Arena (Defeated)",
-    variant:"ghost",
-    onClick: ()=>{
-      closeModal();
-      state.runActive = false;
-      state.enemies = [];
-      renderEnemyList();
-      renderTokens();
-      setStatus("Run ended. Enter The Arena to start again.");
-      log("Run ended.");
-      renderRunStats();
-    }
-  });
+  const title = won ? "Round Cleared" : "Defeat";
+  const subtitle = won ? `You win ${prize} GP.` : `The Salt-Ring Trials end here.`;
 
-  showModal({
-    title: won ? "Round Cleared" : "Defeat",
-    subtitle: won ? `You win ${prize} GP.` : `The Salt-Ring Trials end here.`,
-    bodyHtml: `
+  showDock({
+    title,
+    sub: subtitle,
+    body: `
       <div class="card">
         <div class="cardRow"><div><strong>Prize</strong></div><div class="badge">${won ? prize + " GP" : "—"}</div></div>
         <div style="margin-top:8px;color:var(--muted);font-size:13px;">Total gold: <span class="kbd">${state.totalGold}</span></div>
@@ -862,7 +491,24 @@ function endRound(won){
         </div>
       </div>
     `,
-    actions
+    actions: [
+      ...(won && next ? [{
+        label: "Proceed to Next Round",
+        variant: "primary",
+        onClick: ()=>{
+          hideDock();
+          startRound(next);
+        }
+      }] : []),
+      {
+        label: "Leave Arena",
+        variant: "ghost",
+        onClick: ()=>{
+          hideDock();
+          resetRunState("Run ended. Enter The Arena to start again.");
+        }
+      }
+    ]
   });
 }
 
@@ -874,53 +520,398 @@ function getNextRoundId(){
   return a.rounds[idx+1]?.id || null;
 }
 
-function startRound(roundId, fromProgression=false){
-  const a = getArena();
-  if(!a) return;
-  const r = a.rounds.find(x=>x.id===roundId) || a.rounds[0];
-  state.roundId = r.id;
+/* Turn Dock (left panel) */
 
-  // reset counters, spawn enemies, reset per-round flags
-  state.runActive = true;
-  state.turn = 1;
-  state.successes = 0;
-  state.failures = 0;
-  state.pressure = 0;
-  state.dcModifier = 0;
-  for(const p of state.players){ delete p._beastBonusUsed; }
-  spawnEnemies(r);
+function showDock({title, sub="", body="", actions=[]}){
+  $("#dockTitle").textContent = title;
+  $("#dockSub").textContent = sub;
+  $("#dockBody").innerHTML = body;
 
-  renderSelects();
-  renderMap();
-  renderEnemyList();
-  renderTokens();
-  renderRunStats();
+  const host = $("#dockActions");
+  host.innerHTML = "";
+  for(const a of actions){
+    const b = document.createElement("button");
+    b.className = "btn" + (a.variant ? ` btn--${a.variant}` : "");
+    b.textContent = a.label;
+    b.addEventListener("click", ()=> a.onClick?.());
+    host.appendChild(b);
+  }
 
-  showModal({
-    title: fromProgression ? `Next Round: ${r.title}` : `Enter The Arena: ${r.title}`,
-    subtitle: `Prize: ${r.reward_gp} GP`,
-    bodyHtml: roundRulesHtml(r),
-    actions:[
-      {label:"Begin Round", variant:"primary", onClick: ()=>{
-        closeModal();
-        setStatus("Turn 1. Click Play Turn.");
+  $("#turnDock").classList.remove("hidden");
+}
+function hideDock(){
+  $("#turnDock").classList.add("hidden");
+  $("#dockBody").innerHTML = "";
+  $("#dockActions").innerHTML = "";
+}
+function openRulesDock(isStart=false){
+  const r = getRound();
+  if(!r) return;
+  const sc = r.skill_challenge;
+  const notes = (sc.notes||[]).map(n=>`<li>${escapeHtml(n)}</li>`).join("");
+  const actions = (sc.actions||[]).map(a=>`<li><strong>${escapeHtml(a.label)}</strong>${a.special ? ` <span class="badge">${escapeHtml(a.special)}</span>`:""}</li>`).join("");
+
+  showDock({
+    title: isStart ? `Enter The Arena: ${r.title}` : r.title,
+    sub: `Prize: ${r.reward_gp} GP`,
+    body: `
+      <div class="card">
+        <div><strong>What you’re trying to do</strong></div>
+        <ul style="margin:8px 0 0 18px;">${notes}</ul>
+      </div>
+      <div style="height:10px"></div>
+      <div class="card">
+        <div class="cardRow"><div><strong>Win</strong></div><div class="badge">${sc.target_successes} successes</div></div>
+        <div class="cardRow" style="margin-top:8px;"><div><strong>Lose</strong></div><div class="badge">${sc.max_failures} failures</div></div>
+        <div style="margin-top:8px;color:var(--muted);font-size:13px;">
+          Failure damage: <span class="kbd">${escapeHtml(sc.damage_on_failure)}</span>
+        </div>
+        ${sc.turn_limit ? `<div style="margin-top:8px;color:var(--muted);font-size:13px;">Tempo limit: <span class="kbd">${sc.turn_limit}</span> turns (overtime hurts).</div>` : ""}
+      </div>
+      <div style="height:10px"></div>
+      <div class="card">
+        <div><strong>Approaches</strong></div>
+        <ul style="margin:8px 0 0 18px;">${actions}</ul>
+      </div>
+      <div style="height:10px"></div>
+      <div class="card">
+        <div><strong>DCs</strong></div>
+        <div style="margin-top:8px; display:flex; gap:10px; flex-wrap:wrap;">
+          <span class="badge">Easy ${sc.dcs.easy}</span>
+          <span class="badge">Standard ${sc.dcs.standard}</span>
+          <span class="badge">Hard ${sc.dcs.hard}</span>
+        </div>
+      </div>
+    `,
+    actions: isStart ? [
+      { label: "Begin Round", variant: "primary", onClick: ()=>{
+        hideDock();
+        setStatus("Round started. Click Play Turn.");
         log(`--- ${r.title} begins ---`);
-        openTurnModal();
       }},
-      {label:"Not yet", variant:"ghost", onClick: closeModal}
+      { label: "Not yet", variant: "ghost", onClick: hideDock }
+    ] : [
+      { label: "Close", variant: "ghost", onClick: hideDock }
     ]
   });
 }
 
-function openRoundRules(){
-  const r = getRound();
-  if(!r) return;
-  showModal({
-    title: r.title,
-    subtitle: `Prize: ${r.reward_gp} GP`,
-    bodyHtml: roundRulesHtml(r),
-    actions:[{label:"Close",variant:"ghost",onClick:closeModal}]
+function openTurnDock(){
+  const round = getRound();
+  if(!round) return;
+
+  if(!state.runActive){
+    setStatus("Start the round first: Enter The Arena.");
+    return;
+  }
+  if(state.players.length === 0){
+    showDock({
+      title: "No players",
+      sub: "Add at least one player first.",
+      body: `<div class="card"><div class="muted">Use <span class="kbd">Add Player</span> in the top bar.</div></div>`,
+      actions: [{label:"Close", variant:"ghost", onClick: hideDock}]
+    });
+    return;
+  }
+
+  // advance turn
+  state.turn += 1;
+
+  const sc = round.skill_challenge;
+  const atk = round.attack || {hit_dc: 14, default_damage:"2d8"};
+
+  const alivePlayers = state.players.filter(p=>p.hp>0);
+  if(alivePlayers.length === 0){
+    endRound(false);
+    return;
+  }
+
+  const playerOptions = alivePlayers.map(p=>`<option value="${p.id}">${escapeHtml(p.name)} (HP ${p.hp}/${p.maxHp})</option>`).join("");
+  const actionOptions = (sc.actions||[]).map(a=>`<option value="${escapeHtml(a.id)}">${escapeHtml(a.label)}</option>`).join("");
+
+  const livingEnemies = state.enemies.filter(e=>!e.maxHp || e.hp>0);
+  const enemyOptions = livingEnemies.map(e=>`<option value="${e.id}">${escapeHtml(e.name)}${e.maxHp ? ` (HP ${e.hp}/${e.maxHp})` : ""}</option>`).join("");
+
+  const tempoWarn = sc.turn_limit && state.turn > sc.turn_limit
+    ? `<div class="card" style="border-color:rgba(210,61,61,.55);background:rgba(210,61,61,.08)">
+         <strong>OVERTIME</strong>
+         <div class="muted" style="font-size:12px;margin-top:6px;">The tempo is out of control. Extra attrition applies when you resolve.</div>
+       </div><div style="height:10px"></div>`
+    : "";
+
+  showDock({
+    title: `${round.title}`,
+    sub: `Turn ${state.turn} | Success ${state.successes}/${sc.target_successes} | Fail ${state.failures}/${sc.max_failures}`,
+    body: `
+      ${tempoWarn}
+      <div class="card">
+        <div class="grid2">
+          <label class="field">
+            <span>Active Player</span>
+            <select id="t_player">${playerOptions}</select>
+          </label>
+          <label class="field">
+            <span>Target</span>
+            <select id="t_target">${enemyOptions || `<option value="">(no targets)</option>`}</select>
+          </label>
+        </div>
+      </div>
+
+      <div style="height:10px"></div>
+
+      <div class="card">
+        <div><strong>1) Skill Check</strong></div>
+        <div class="grid2" style="margin-top:10px;">
+          <label class="field">
+            <span>Approach</span>
+            <select id="t_action">${actionOptions}</select>
+          </label>
+          <label class="field">
+            <span>DC</span>
+            <select id="t_dc">
+              <option value="easy">Easy (${sc.dcs.easy})</option>
+              <option value="standard" selected>Standard (${sc.dcs.standard})</option>
+              <option value="hard">Hard (${sc.dcs.hard})</option>
+            </select>
+          </label>
+        </div>
+        <div class="grid2" style="margin-top:10px;">
+          <label class="field">
+            <span>Skill Modifier</span>
+            <input id="t_skillMod" type="number" value="0" />
+          </label>
+          <div class="field">
+            <span>Roll</span>
+            <button id="t_skillRoll" class="btn btn--primary" type="button">Roll d20</button>
+          </div>
+        </div>
+        <div id="t_skillOut" class="muted" style="font-size:12px;margin-top:8px;">No roll yet.</div>
+      </div>
+
+      <div style="height:10px"></div>
+
+      <div class="card">
+        <div><strong>2) Attack Roll</strong></div>
+        <div class="muted" style="font-size:12px;margin-top:6px;">
+          Hit DC: <span class="kbd">${atk.hit_dc}</span> | Default damage: <span class="kbd">${escapeHtml(atk.default_damage)}</span>
+        </div>
+
+        <div class="grid2" style="margin-top:10px;">
+          <label class="field">
+            <span>Attack Modifier</span>
+            <input id="t_atkMod" type="number" value="0" />
+          </label>
+          <div class="field">
+            <span>Roll</span>
+            <button id="t_atkRoll" class="btn btn--primary" type="button">Roll d20</button>
+          </div>
+        </div>
+
+        <div class="grid2" style="margin-top:10px;">
+          <label class="field">
+            <span>Damage (dice like 2d8 or number)</span>
+            <input id="t_dmg" value="${escapeHtml(atk.default_damage)}" />
+          </label>
+          <div class="field">
+            <span>Apply Damage</span>
+            <button id="t_applyDmg" class="btn btn--ghost" type="button">Apply</button>
+          </div>
+        </div>
+
+        <div id="t_atkOut" class="muted" style="font-size:12px;margin-top:8px;">No attack yet.</div>
+      </div>
+    `,
+    actions: [
+      { label: "Resolve Turn", variant: "primary", onClick: ()=> resolveTurnFromDock(round) },
+      { label: "Cancel", variant: "ghost", onClick: hideDock }
+    ]
   });
+
+  // Local per-dock memory
+  const mem = {
+    skill: null,   // {pass,total,dc,d20,mod,dcLevel,actionId}
+    attack: null,  // {hit,total,dc,d20,mod}
+    damageApplied: false,
+    lastDamage: 0
+  };
+
+  $("#t_skillRoll").addEventListener("click", ()=>{
+    const pid = $("#t_player").value;
+    const p = state.players.find(x=>x.id===pid);
+    if(!p) return;
+
+    const dcLevel = $("#t_dc").value;
+    const baseDc = (dcLevel==="easy" ? sc.dcs.easy : dcLevel==="hard" ? sc.dcs.hard : sc.dcs.standard);
+    const mod = parseInt($("#t_skillMod").value||"0",10);
+    const d20 = 1 + Math.floor(Math.random()*20);
+    const total = d20 + mod;
+    const pass = total >= baseDc;
+
+    const actionId = $("#t_action").value;
+
+    mem.skill = {pass,total,dc:baseDc,d20,mod,dcLevel,actionId};
+
+    $("#t_skillOut").innerHTML = pass
+      ? `✅ Skill: <span class="kbd">${d20}</span> + ${mod} = <strong>${total}</strong> vs DC ${baseDc}.`
+      : `❌ Skill: <span class="kbd">${d20}</span> + ${mod} = <strong>${total}</strong> vs DC ${baseDc}.`;
+  });
+
+  $("#t_atkRoll").addEventListener("click", ()=>{
+    const mod = parseInt($("#t_atkMod").value||"0",10);
+    const d20 = 1 + Math.floor(Math.random()*20);
+    const total = d20 + mod;
+    const dc = atk.hit_dc || 14;
+    const hit = total >= dc;
+
+    mem.attack = {hit,total,dc,d20,mod};
+    mem.damageApplied = false;
+    mem.lastDamage = 0;
+
+    $("#t_atkOut").innerHTML = hit
+      ? `✅ Attack: <span class="kbd">${d20}</span> + ${mod} = <strong>${total}</strong> vs DC ${dc}. (Hit)`
+      : `❌ Attack: <span class="kbd">${d20}</span> + ${mod} = <strong>${total}</strong> vs DC ${dc}. (Miss)`;
+  });
+
+  $("#t_applyDmg").addEventListener("click", ()=>{
+    if(!mem.attack){
+      alert("Roll an attack first.");
+      return;
+    }
+    if(!mem.attack.hit){
+      alert("Attack missed. No damage to apply.");
+      return;
+    }
+
+    const tid = $("#t_target").value;
+    const target = state.enemies.find(e=>e.id===tid);
+    if(!target){
+      alert("Pick a valid target.");
+      return;
+    }
+    if(target.maxHp && target.hp<=0){
+      alert("That target is already defeated.");
+      return;
+    }
+
+    const raw = String($("#t_dmg").value||"").trim();
+    let dmg = 0;
+
+    if(/^\d+d\d+$/i.test(raw)){
+      dmg = rollDice(raw).total;
+    }else{
+      dmg = parseInt(raw,10) || 0;
+    }
+
+    if(dmg <= 0){
+      alert("Enter damage as dice (e.g. 2d8) or a positive number.");
+      return;
+    }
+
+    mem.damageApplied = true;
+    mem.lastDamage = dmg;
+
+    if(target.maxHp){
+      target.hp = clamp(target.hp - dmg, 0, target.maxHp);
+      if(target.hp === 0){
+        log(`${target.name} is defeated.`);
+      }
+    }
+
+    const ov = round.scene?.overlays || {};
+    showOverlay(ov.pc_hit, 650);
+
+    log(`Attack damage to ${target.name}: -${dmg} HP.`);
+    renderEnemyList();
+
+    $("#t_atkOut").innerHTML += ` <span class="badge">Damage applied: ${dmg}</span>`;
+  });
+
+  renderHeaderStats();
+  save();
+}
+
+function resolveTurnFromDock(round){
+  const sc = round.skill_challenge;
+
+  const pid = $("#t_player").value;
+  const p = state.players.find(x=>x.id===pid);
+  if(!p){
+    alert("Pick an active player.");
+    return;
+  }
+  if(p.hp <= 0){
+    alert("That player is at 0 HP.");
+    return;
+  }
+
+  // Must have a skill roll to resolve
+  const skillLine = $("#t_skillOut").textContent || "";
+  if(skillLine.includes("No roll yet")){
+    alert("Roll the Skill check first.");
+    return;
+  }
+
+  // Reconstruct from output is messy; instead store on window:
+  // We'll store last skill in a hidden dataset:
+  // To keep this simple: require user to click Roll and we infer pass/fail by presence of ✅/❌.
+  const skillPass = $("#t_skillOut").innerHTML.includes("✅");
+  const actionId = $("#t_action").value;
+  const dcLevel = $("#t_dc").value;
+
+  // Apply skill result
+  if(skillPass){
+    let gained = 1;
+
+    // Beast-Pen special: Hard animal_handling gives +2 successes once per player
+    const isBeastBonus = round.id === "r4" && actionId === "animal_handling" && dcLevel === "hard";
+    if(isBeastBonus && !p._beastBonusUsed){
+      gained = 2;
+      p._beastBonusUsed = true;
+      log(`${p.name} mastered the beast line (Hard): +2 successes (once per player).`);
+    }else{
+      log(`${p.name} succeeded: +1 success.`);
+    }
+
+    state.successes += gained;
+  }else{
+    applyFailureToPlayer(p, round);
+  }
+
+  // Overtime pressure (after turn_limit)
+  applyOvertimePressure(round);
+
+  // Check victory/defeat conditions
+  const victoryByScore = state.successes >= sc.target_successes;
+  const defeatByFails = state.failures >= sc.max_failures;
+  const defeatByWipe = !partyAlive();
+
+  // Alternate win: all enemies defeated (hybrid pace)
+  const victoryByKO = !enemiesAlive();
+
+  hideDock();
+
+  renderPartyList();
+  renderEnemyList();
+  renderHeaderStats();
+  save();
+
+  if(victoryByKO){
+    setStatus("Opponents defeated. Round can end now.");
+    log("All opponents defeated. You may End Round as a win.");
+    return;
+  }
+
+  if(victoryByScore){
+    endRound(true);
+    return;
+  }
+
+  if(defeatByFails || defeatByWipe){
+    endRound(false);
+    return;
+  }
+
+  setStatus("Turn resolved. Click Play Turn for the next player.");
 }
 
 function openAddPlayer(){
@@ -928,214 +919,148 @@ function openAddPlayer(){
   const node = tpl.content.cloneNode(true);
   const form = node.querySelector("#addPlayerForm");
 
-  showModal({ title:"Add Player", subtitle:"Create a draggable token + HP tracker.", bodyHtml:"", actions:[] });
-  $("#modalBody").appendChild(node);
+  showDock({
+    title: "Add Player",
+    sub: "Portrait + HP tracker only (no tokens).",
+    body: "",
+    actions: []
+  });
+
+  $("#dockBody").appendChild(node);
 
   form.addEventListener("submit", async (e)=>{
     e.preventDefault();
     const fd = new FormData(form);
     const name = String(fd.get("name")||"").trim();
     const maxHp = clamp(parseInt(fd.get("maxHp")||"0",10) || 1, 1, 999);
-    const size = clamp(parseInt(fd.get("size")||"1",10) || 1, 1, 3);
     const tag = String(fd.get("tag")||"").trim();
     const file = fd.get("image");
 
     let image = "";
-if(file && file instanceof File && file.size > 0){
-  // Resize/compress so localStorage doesn't explode
-  image = await fileToSmallDataURL(file, 128, 0.75);
-}
+    if(file && file instanceof File && file.size > 0){
+      image = await fileToSmallDataURL(file, 96, 0.78);
+    }
 
     const id = uid("p");
-    state.players.push({ id, name, maxHp, hp:maxHp, size, tag, image });
-ensurePos(id, "player");
+    state.players.push({ id, name, tag, maxHp, hp:maxHp, image });
 
-const ok = save();
-if(!ok){
-  // Roll back if we couldn't save cleanly (prevents duplicate ghost players)
-  state.players = state.players.filter(p => p.id !== id);
-  delete state.positions[id];
-  alert("Storage is full (likely from token images). Try a smaller image, or remove some players and re-add.");
-  renderPartyList();
-  renderTokens();
-  return;
-}
+    const ok = save();
+    if(!ok){
+      // rollback (prevents duplicates)
+      state.players = state.players.filter(p=>p.id !== id);
+      alert("Storage is full (usually portraits). Try a smaller image.");
+      renderPartyList();
+      return;
+    }
 
-renderPartyList();
-renderTokens();
-closeModal();
+    renderPartyList();
+    hideDock();
   });
 
-  $("#modalBody").querySelector("[data-cancel]").addEventListener("click", closeModal);
+  $("#dockBody").querySelector("[data-cancel]").addEventListener("click", hideDock);
 }
 
 async function init(){
   load();
-  setGrid();
 
   const res = await fetch("data/arenas.json");
   const data = await res.json();
   state.arenas = data.arenas || [];
-  state.arenaId = state.arenas[0]?.id || null;
-  state.roundId = state.arenas[0]?.rounds?.[0]?.id || null;
+
+  // Restore selection if possible, otherwise default
+  if(!state.arenaId) state.arenaId = state.arenas[0]?.id || null;
+  if(!state.roundId) state.roundId = state.arenas[0]?.rounds?.[0]?.id || null;
 
   renderSelects();
-  renderMap();
+  setScene();
   renderPartyList();
   renderEnemyList();
-  renderTokens();
-
-  $("#gridToggle").checked = state.gridEnabled;
-  $("#gridSize").value = state.gridSize;
+  renderHeaderStats();
 
   $("#arenaSelect").addEventListener("change", (e)=>{
     state.arenaId = e.target.value;
     const a = getArena();
     state.roundId = a?.rounds?.[0]?.id || null;
-    resetRunState();
+    save();
+    resetRunState("Arena changed. Ready.");
     renderSelects();
-    renderMap();
+    setScene();
+    renderHeaderStats();
   });
 
   $("#roundSelect").addEventListener("change", (e)=>{
     state.roundId = e.target.value;
-    resetRunState();
-    renderMap();
+    save();
+    resetRunState("Round changed. Ready.");
+    setScene();
+    renderHeaderStats();
   });
 
   $("#enterArenaBtn").addEventListener("click", ()=>{
-    startRound(state.roundId, false);
+    startRound(state.roundId);
   });
 
   $("#addPlayerBtn").addEventListener("click", openAddPlayer);
 
-  $("#gridToggle").addEventListener("change", (e)=>{
-    state.gridEnabled = e.target.checked;
-    setGrid();
+  $("#backToStartBtn").addEventListener("click", ()=>{
+    if(!confirm("Back to Start? (Resets run counters and returns to first round)")) return;
+    const a = getArena();
+    if(!a) return;
+    state.roundId = a.rounds[0]?.id || state.roundId;
     save();
+    resetRunState("Back to start. Enter The Arena to begin.");
+    renderSelects();
+    setScene();
+    renderHeaderStats();
   });
 
-  $("#gridSize").addEventListener("input", (e)=>{
-    state.gridSize = parseInt(e.target.value,10);
-    setGrid();
-    save();
+  $("#resetRunBtn").addEventListener("click", ()=>{
+    if(!confirm("Reset current run (success/fail/turn/opponents)?")) return;
+    resetRunState("Run reset. Enter The Arena to start again.");
+    setScene();
   });
 
-  $("#resetPositionsBtn").addEventListener("click", ()=>{
-    if(!confirm("Reset all token positions?")) return;
-    state.positions = {};
-    save();
-    renderTokens();
-  });
+  $("#dockClose").addEventListener("click", hideDock);
 
-  $("#restartRoundBtn").addEventListener("click", ()=>{
-  if(!confirm("Restart this round from the beginning? (Resets successes/failures, respawns enemies, resets party HP)")) return;
-  const current = getRound();
-  if(!current) return;
+  $("#viewRulesBtn").addEventListener("click", ()=> openRulesDock(false));
 
-  resetPlayersToMax();
-
-  // Clear only enemy positions (keep player positions)
-  state.positions = state.positions || {};
-  for(const e of state.enemies){ delete state.positions[e.id]; }
-
-  state.turn = 1;
-  state.successes = 0;
-  state.failures = 0;
-  state.pressure = 0;
-  state.dcModifier = 0;
-
-  spawnEnemies(current);
-  renderEnemyList();
-  renderTokens();
-  renderRunStats();
-
-  state.runActive = true;
-  setStatus("Round restarted. Click Play Turn.");
-  log(`--- ${current.title} restarted ---`);
-});
-
-$("#restartArenaBtn").addEventListener("click", ()=>{
-  if(!confirm("Back to Start? (Resets party HP, respawns enemies, returns to Round 1)")) return;
-  const a = getArena();
-  if(!a) return;
-
-  resetPlayersToMax();
-
-  // Back to Round 1
-  state.roundId = a.rounds[0]?.id || state.roundId;
-
-  // Clear enemies so they respawn fresh
-  state.enemies = [];
-
-  state.turn = 1;
-  state.successes = 0;
-  state.failures = 0;
-  state.pressure = 0;
-  state.dcModifier = 0;
-
-  state.runActive = false;
-
-  renderSelects();
-  renderMap();
-  renderEnemyList();
-  renderTokens();
-  renderRunStats();
-
-  setStatus("Back to start. Enter The Arena to begin.");
-  log("Returned to Round 1 (start).");
-});
-   
-   $("#resetRunBtn").addEventListener("click", ()=>{
-    if(!confirm("Reset the current run (success/fail counters, enemies, DC modifiers)?")) return;
-    resetRunState();
-  });
-
-  $("#modalClose").addEventListener("click", closeModal);
-  $("#modalBackdrop").addEventListener("click", closeModal);
-
-  $("#openRoundRulesBtn").addEventListener("click", openRoundRules);
-
-  $("#nextTurnBtn").addEventListener("click", ()=>{
-    if(!state.runActive){
-      setStatus("Start the round first: Enter The Arena.");
-      return;
-    }
-    openTurnModal();
-  });
+  $("#playTurnBtn").addEventListener("click", openTurnDock);
 
   $("#endRoundBtn").addEventListener("click", ()=>{
-  if(!state.runActive){
-    setStatus("No active round.");
-    return;
-  }
-  const living = state.enemies.filter(e=>e.maxHp && e.hp>0);
-  const msg = living.length===0
-    ? "All opponents appear defeated. End this round now?"
-    : `There are still ${living.length} opponent(s) with HP remaining. End anyway?`;
+    if(!state.runActive){
+      setStatus("No active round.");
+      return;
+    }
+    const living = state.enemies.filter(e=>e.maxHp && e.hp>0);
+    const msg = living.length===0
+      ? "All opponents appear defeated. End this round now?"
+      : `There are still ${living.length} opponent(s) with HP remaining. End anyway?`;
 
-  showModal({
-    title: "End Round",
-    subtitle: msg,
-    bodyHtml: `<div class="card"><div class="muted">Choose how to resolve the round. If you are using the hybrid model, this is how you finish early when the fight is over.</div></div>`,
-    actions: [
-      { label: "Count as Win", variant: "primary", onClick: ()=>{ closeModal(); endRound(true); } },
-      { label: "Count as Loss", variant: "danger", onClick: ()=>{ closeModal(); endRound(false); } },
-      { label: "Cancel", variant: "ghost", onClick: closeModal }
-    ]
+    showDock({
+      title: "End Round",
+      sub: msg,
+      body: `<div class="card"><div class="muted">Use this if you want the hybrid model: defeat opponents first, then finish the round.</div></div>`,
+      actions: [
+        { label:"Count as Win", variant:"primary", onClick: ()=>{ hideDock(); endRound(true); } },
+        { label:"Count as Loss", variant:"danger", onClick: ()=>{ hideDock(); endRound(false); } },
+        { label:"Cancel", variant:"ghost", onClick: hideDock }
+      ]
+    });
   });
-});
-   
-   $("#forfeitBtn").addEventListener("click", ()=>{
-    if(!state.runActive) return;
+
+  $("#forfeitBtn").addEventListener("click", ()=>{
+    if(!state.runActive){
+      setStatus("No active round.");
+      return;
+    }
     if(confirm("Forfeit this round?")){
       endRound(false);
     }
   });
 
   setStatus("Ready. Add players, then Enter The Arena.");
-  log("Loaded Arenas of The Scarlett Isles.");
-  renderRunStats();
+  log("Loaded Arenas (POV mini-game mode).");
+  renderHeaderStats();
 }
 
 init();
