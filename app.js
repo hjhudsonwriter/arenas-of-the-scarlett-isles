@@ -415,13 +415,15 @@ function applyFailureToPlayer(p, round){
   const dmg = rollDice(sc.damage_on_failure);
   p.hp = clamp(p.hp - dmg.total, 0, p.maxHp);
 
-  const ov = round.scene?.overlays || {};
-  // Wyvern heavy failure: if damage big, swap overlay
-  if(round.id === "r5" && dmg.total >= 24 && ov.pc_fail_heavy){
-    showOverlay(ov.pc_fail_heavy, 1100);
-  }else{
-    showOverlay(ov.pc_fail, 850);
+    const ov = round.scene?.overlays || {};
+
+  // If JSON provides multiple fail variants, pick one at random.
+  let failSrc = ov.pc_fail;
+  if(Array.isArray(ov.pc_fail_variants) && ov.pc_fail_variants.length){
+    failSrc = ov.pc_fail_variants[Math.floor(Math.random() * ov.pc_fail_variants.length)];
   }
+
+  showOverlay(failSrc, 950);
 
   log(`${p.name} failed: -${dmg.total} HP (${dmg.expr}: ${dmg.rolls.join(", ")}).`);
 }
