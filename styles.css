@@ -232,17 +232,40 @@ select:focus,input:focus{
 
 /* TURN DOCK (left-side mini-game panel) */
 /* TURN DOCK (below the POV image, so it doesn't cover the arena) */
+/* TURN DOCK: overlay strip across bottom of the map */
 .turnDock{
-  position:relative;
-  width:100%;
-  background: linear-gradient(180deg, rgba(18,18,20,.96), rgba(18,18,20,.82));
-  border-top:1px solid var(--line);
+  position:absolute;
+  left:10px;
+  right:10px;
+  bottom:10px;
+  height: 230px;           /* small enough to not steal the scene */
+  background: linear-gradient(180deg, rgba(15,15,18,.55), rgba(15,15,18,.92));
+  border:1px solid var(--line);
+  border-radius: 14px;
   display:flex;
   flex-direction:column;
   overflow:hidden;
-  max-height: 44vh; /* keeps it from becoming a skyscraper */
+  z-index: 20;
+  backdrop-filter: blur(10px);
 }
-.dockBody{ padding:12px; overflow:auto; }
+
+.dockBody{
+  padding:10px 12px;
+  overflow:auto;
+}
+
+.dockSplit{
+  display:grid;
+  grid-template-columns: 1fr 1fr;
+  gap:12px;
+  align-items:start;
+}
+.dockCol{
+  border:1px solid rgba(255,255,255,.06);
+  border-radius: 12px;
+  padding:10px;
+  background: rgba(0,0,0,.18);
+}
 .dockHeader{
   display:flex;
   align-items:flex-start;
