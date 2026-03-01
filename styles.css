@@ -340,3 +340,61 @@ select option{
   padding: 6px 12px;
   font-size: 13px;
 }
+
+/* ===========================
+   MODALS: prevent cut-off
+   =========================== */
+
+/* Generic modal backdrop */
+.modalBackdrop{
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(0,0,0,.55);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+}
+
+/* Generic modal panel */
+.modal{
+  width: min(900px, 96vw);
+  max-height: min(80vh, 760px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+
+  background: rgba(18,18,20,.92);
+  border: 1px solid rgba(255,255,255,.14);
+  border-radius: 16px;
+  box-shadow: 0 20px 60px rgba(0,0,0,.65);
+}
+
+/* Modal header area */
+.modalHeader{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:12px;
+  padding: 14px 16px;
+  border-bottom: 1px solid rgba(255,255,255,.10);
+}
+
+/* Modal body scrolls instead of cutting off */
+.modalBody{
+  padding: 14px 16px;
+  overflow: auto;
+}
+
+/* Modal footer buttons always visible */
+.modalFooter{
+  padding: 12px 16px;
+  border-top: 1px solid rgba(255,255,255,.10);
+  display:flex;
+  justify-content:flex-end;
+  gap:10px;
+  background: rgba(0,0,0,.22);
+}
