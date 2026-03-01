@@ -575,12 +575,10 @@ function endRound(won){
         <div class="cardRow"><div><strong>Prize</strong></div><div class="badge">${won ? prize + " GP" : "—"}</div></div>
         <div style="margin-top:8px;color:var(--muted);font-size:13px;">Total gold: <span class="kbd">${state.totalGold}</span></div>
       </div>
-      <div style="height:10px"></div>
       <div class="card">
         <div><strong>Party HP</strong></div>
         <div style="margin-top:10px;color:var(--muted);font-size:13px;">${partyHp}</div>
       </div>
-      <div style="height:10px"></div>
       <div class="card">
         <div><strong>Score</strong></div>
         <div style="margin-top:8px;color:var(--muted);font-size:13px;">
@@ -658,7 +656,6 @@ function openRulesDock(isStart=false){
         <div><strong>What you’re trying to do</strong></div>
         <ul style="margin:8px 0 0 18px;">${notes}</ul>
       </div>
-      <div style="height:10px"></div>
       <div class="card">
         <div class="cardRow"><div><strong>Win</strong></div><div class="badge">${sc.target_successes} successes</div></div>
         <div class="cardRow" style="margin-top:8px;"><div><strong>Lose</strong></div><div class="badge">${sc.max_failures} failures</div></div>
@@ -667,12 +664,10 @@ function openRulesDock(isStart=false){
         </div>
         ${sc.turn_limit ? `<div style="margin-top:8px;color:var(--muted);font-size:13px;">Tempo limit: <span class="kbd">${sc.turn_limit}</span> turns (overtime hurts).</div>` : ""}
       </div>
-      <div style="height:10px"></div>
       <div class="card">
         <div><strong>Approaches</strong></div>
         <ul style="margin:8px 0 0 18px;">${actions}</ul>
       </div>
-      <div style="height:10px"></div>
       <div class="card">
         <div><strong>DCs</strong></div>
         <div style="margin-top:8px; display:flex; gap:10px; flex-wrap:wrap;">
