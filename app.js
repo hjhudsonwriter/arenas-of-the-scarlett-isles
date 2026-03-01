@@ -620,6 +620,7 @@ function getNextRoundId(){
 /* Turn Dock (left panel) */
 
 function showDock({title, sub="", body="", actions=[]}){
+  state.dockOpen = true; 
   $("#dockTitle").textContent = title;
   $("#dockSub").textContent = sub;
   $("#dockBody").innerHTML = body;
@@ -636,7 +637,19 @@ function showDock({title, sub="", body="", actions=[]}){
 
   $("#turnDock").classList.remove("hidden");
 }
+function setTurnDockBlocked(isBlocked){
+  const td = document.getElementById("turnDock");
+  if(!td) return;
+  if(isBlocked) td.classList.add("hidden");
+  else{
+    // Only unhide if it was supposed to be open
+    // (If your code uses a separate flag, keep it consistent)
+    if(state.dockOpen) td.classList.remove("hidden");
+  }
+}
 function hideDock(){
+  setTurnDockBlocked(false); 
+  state.dockOpen = false; 
   $("#turnDock").classList.add("hidden");
   $("#dockBody").innerHTML = "";
   $("#dockActions").innerHTML = "";
@@ -1022,6 +1035,7 @@ function resolveTurnFromDock(round){
 }
 
 function openAddPlayer(){
+  setTurnDockBlocked(true); 
   const tpl = $("#tplAddPlayer");
   const node = tpl.content.cloneNode(true);
   const form = node.querySelector("#addPlayerForm");
@@ -1034,6 +1048,11 @@ function openAddPlayer(){
   });
 
   $("#dockBody").appendChild(node);
+
+  const closeAddPlayer = ()=>{
+    setTurnDockBlocked(false);
+    hideDock();
+  };
 
   form.addEventListener("submit", async (e)=>{
     e.preventDefault();
@@ -1061,10 +1080,10 @@ function openAddPlayer(){
     }
 
     renderPartyList();
-    hideDock();
+    closeAddPlayer();
   });
 
-  $("#dockBody").querySelector("[data-cancel]").addEventListener("click", hideDock);
+  $("#dockBody").querySelector("[data-cancel]").addEventListener("click", closeAddPlayer);
 }
 
 async function init(){
