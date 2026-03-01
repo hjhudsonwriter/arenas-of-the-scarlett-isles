@@ -9,6 +9,73 @@ const $ = (sel, el=document) => el.querySelector(sel);
 const $$ = (sel, el=document) => Array.from(el.querySelectorAll(sel));
 
 const STORAGE_KEY = "tsi_arenas_state_v3_pov";
+/* =========================
+   SFX (assets/sfx)
+   ========================= */
+
+const SFX = {
+  crowd_loop: "assets/sfx/crowd_standard.mp3",
+  crowd_hit:  "assets/sfx/crowd_hit.mp3",
+  crowd_fail: "assets/sfx/crowd_fail.mp3",
+
+  r1_hit: "assets/sfx/arena_duelist_hit.mp3",
+  r1_fail:"assets/sfx/arena_duelist_fail.mp3",
+
+  r4_hit: "assets/sfx/beast_pen_hit.mp3",
+  r4_fail:"assets/sfx/beast_pen_fail.mp3",
+
+  r5_hit: "assets/sfx/wyvern_hit.mp3",
+  r5_fail:"assets/sfx/wyvern_fail.mp3",
+};
+
+let crowdLoopAudio = null;
+
+function ensureCrowdLoop(){
+  if(crowdLoopAudio) return;
+  crowdLoopAudio = new Audio(SFX.crowd_loop);
+  crowdLoopAudio.loop = true;
+  crowdLoopAudio.volume = 0.35;
+}
+
+function startCrowdLoop(){
+  ensureCrowdLoop();
+  try{
+    crowdLoopAudio.currentTime = 0;
+    crowdLoopAudio.play();
+  }catch(e){}
+}
+
+function stopCrowdLoop(){
+  if(!crowdLoopAudio) return;
+  try{
+    crowdLoopAudio.pause();
+    crowdLoopAudio.currentTime = 0;
+  }catch(e){}
+}
+
+// one-shot that can overlap itself (new Audio each time)
+function playOneShot(src, volume=0.7){
+  if(!src) return;
+  const a = new Audio(src);
+  a.volume = volume;
+  a.play().catch(()=>{});
+}
+
+function playHitSfx(roundId){
+  // round-specific first (as requested), then crowd hit
+  if(roundId === "r1") playOneShot(SFX.r1_hit, 0.9);
+  if(roundId === "r4") playOneShot(SFX.r4_hit, 0.9);
+  if(roundId === "r5") playOneShot(SFX.r5_hit, 0.9);
+  playOneShot(SFX.crowd_hit, 0.75);
+}
+
+function playFailSfx(roundId){
+  // round-specific first, then crowd fail
+  if(roundId === "r1") playOneShot(SFX.r1_fail, 0.9);
+  if(roundId === "r4") playOneShot(SFX.r4_fail, 0.9);
+  if(roundId === "r5") playOneShot(SFX.r5_fail, 0.9);
+  playOneShot(SFX.crowd_fail, 0.75);
+}
 
 const state = {
   arenas: [],
@@ -22,6 +89,7 @@ const state = {
   // run state
   runActive: false,
   turn: 0,
+  turnIndex: 0,
   successes: 0,
   failures: 0,
   enemies: [], // {id,name,hp,maxHp,defId}
@@ -364,8 +432,10 @@ function renderEnemyList(){
 }
 
 function resetRunState(msg="Run reset."){
+  stopCrowdLoop();
   state.runActive = false;
   state.turn = 0;
+  state.turnIndex = 0; 
   state.successes = 0;
   state.failures = 0;
   state.enemies = [];
@@ -386,6 +456,7 @@ function startRound(roundId){
   state.turn = 0;
   state.successes = 0;
   state.failures = 0;
+  state.turnIndex = 0; 
 
   // per-round flags
   for(const p of state.players){
@@ -426,6 +497,7 @@ function applyFailureToPlayer(p, round){
   }
 
   showOverlay(failSrc, 950);
+    playFailSfx(round.id); 
 
   log(`${p.name} failed: -${dmg.total} HP (${dmg.expr}: ${dmg.rolls.join(", ")}).`);
 }
@@ -508,6 +580,7 @@ function endRound(won){
         label: "Leave Arena",
         variant: "ghost",
         onClick: ()=>{
+          stopCrowdLoop(); 
           hideDock();
           resetRunState("Run ended. Enter The Arena to start again.");
         }
@@ -624,13 +697,15 @@ function openTurnDock(){
   const sc = round.skill_challenge;
   const atk = round.attack || {hit_dc: 14, default_damage:"2d8"};
 
-  const alivePlayers = state.players.filter(p=>p.hp>0);
+    const alivePlayers = state.players.filter(p=>p.hp>0);
   if(alivePlayers.length === 0){
     endRound(false);
     return;
   }
 
-  const playerOptions = alivePlayers.map(p=>`<option value="${p.id}">${escapeHtml(p.name)} (HP ${p.hp}/${p.maxHp})</option>`).join("");
+  // Auto-pick next alive player (round-robin)
+  const p = alivePlayers[state.turnIndex % alivePlayers.length];
+  state.turnIndex += 1;
   const actionOptions = (sc.actions||[]).map(a=>`<option value="${escapeHtml(a.id)}">${escapeHtml(a.label)}</option>`).join("");
 
   const livingEnemies = state.enemies.filter(e=>!e.maxHp || e.hp>0);
@@ -650,15 +725,20 @@ function openTurnDock(){
       ${tempoWarn}
       <div class="card">
         <div class="grid2">
-          <label class="field">
-            <span>Active Player</span>
-            <select id="t_player">${playerOptions}</select>
-          </label>
-          <label class="field">
-            <span>Target</span>
-            <select id="t_target">${enemyOptions || `<option value="">(no targets)</option>`}</select>
-          </label>
-        </div>
+  <div class="field">
+    <span>Active Player</span>
+    <div class="badge" style="display:flex;align-items:center;gap:10px;padding:9px 10px;">
+      ${p.image ? `<img class="portrait" src="${escapeHtml(p.image)}" alt="" />` : ``}
+      <strong>${escapeHtml(p.name)}</strong>
+      <span class="muted">HP ${p.hp}/${p.maxHp}</span>
+    </div>
+    <input id="t_player" type="hidden" value="${p.id}" />
+  </div>
+  <label class="field">
+    <span>Target</span>
+    <select id="t_target">${enemyOptions || `<option value="">(no targets)</option>`}</select>
+  </label>
+</div>
       </div>
 
       <div style="height:10px"></div>
@@ -821,8 +901,9 @@ function openTurnDock(){
       }
     }
 
-    const ov = round.scene?.overlays || {};
-    showOverlay(ov.pc_hit, 650);
+        const ov = round.scene?.overlays || {};
+    showOverlay(ov.pc_hit, 5200);
+    playHitSfx(round.id);
 
     log(`Attack damage to ${target.name}: -${dmg} HP.`);
     renderEnemyList();
@@ -1001,9 +1082,11 @@ async function init(){
   });
 
   $("#enterArenaBtn").addEventListener("click", ()=>{
-    startRound(state.roundId);
-  });
-
+  // user gesture: safe moment to start audio
+  startCrowdLoop();
+  startRound(state.roundId);
+});
+   
   $("#addPlayerBtn").addEventListener("click", openAddPlayer);
 
   $("#backToStartBtn").addEventListener("click", ()=>{
