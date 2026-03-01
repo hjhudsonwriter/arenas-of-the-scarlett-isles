@@ -185,9 +185,11 @@ function setScene(){
   if(!r) return;
 
   $("#sceneBase").src = r.scene?.base || "";
-  const boss = $("#sceneBoss");
+    const boss = $("#sceneBoss");
   const bossSrc = r.scene?.overlay_boss || "";
-  if(bossSrc){
+
+  // IMPORTANT: Only show the "standard/opponents present" overlay once the run is active.
+  if(state.runActive && bossSrc){
     boss.src = bossSrc;
     boss.classList.remove("hidden");
   }else{
@@ -199,7 +201,7 @@ function setScene(){
 }
 
 let overlayTimer = null;
-function showOverlay(src, ms=800){
+function showOverlay(src, ms=5200){
   if(!src) return;
   const el = $("#sceneOverlay");
   el.src = src;
