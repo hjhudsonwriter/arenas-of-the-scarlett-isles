@@ -269,23 +269,45 @@ function setScene(){
 }
 
 let overlayTimer = null;
+let bossRestoreTimer = null;
+let bossPrevSrc = "";
 function showOverlay(src, ms=5200){
+  // Replace the "boss" overlay temporarily (no stacking)
   if(!src) return;
-  const el = $("#sceneOverlay");
-  el.src = src;
-  el.classList.remove("hidden");
-  requestAnimationFrame(()=> el.classList.add("show"));
 
-  if(overlayTimer) clearTimeout(overlayTimer);
-  overlayTimer = setTimeout(()=> hideOverlay(), ms);
+  const boss = $("#sceneBoss");
+  if(!boss) return;
+
+  // Remember what the boss overlay was showing
+  if(!bossPrevSrc) bossPrevSrc = boss.getAttribute("src") || "";
+
+  // Force boss visible while we show the temporary overlay
+  boss.src = src;
+  boss.classList.remove("hidden");
+
+  // Cancel any prior restore timer and restore after ms
+  if(bossRestoreTimer) clearTimeout(bossRestoreTimer);
+  bossRestoreTimer = setTimeout(()=>{
+    const r = getRound();
+    const standard = (state.runActive ? (r.scene?.overlay_boss || "") : "");
+
+    bossPrevSrc = "";
+    if(standard){
+      boss.src = standard;
+      boss.classList.remove("hidden");
+    }else{
+      boss.classList.add("hidden");
+      boss.removeAttribute("src");
+    }
+  }, ms);
 }
 function hideOverlay(){
+  // No-op now: we replace the boss overlay instead of stacking an overlay layer
   const el = $("#sceneOverlay");
-  el.classList.remove("show");
-  setTimeout(()=>{
+  if(el){
     el.classList.add("hidden");
     el.removeAttribute("src");
-  }, 150);
+  }
 }
 
 function renderPartyList(){
