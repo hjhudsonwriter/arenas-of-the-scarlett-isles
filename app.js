@@ -765,6 +765,8 @@ function openTurnDock(){
 
       <div style="height:10px"></div>
 
+  <div class="dockSplit">
+    <div class="dockCol">
       <div class="card">
         <div><strong>1) Skill Check</strong></div>
         <div class="grid2" style="margin-top:10px;">
@@ -794,8 +796,8 @@ function openTurnDock(){
         <div id="t_skillOut" class="muted" style="font-size:12px;margin-top:8px;">No roll yet.</div>
       </div>
 
-      <div style="height:10px"></div>
-
+          </div>
+    <div class="dockCol">
       <div class="card">
         <div><strong>2) Attack Roll</strong></div>
         <div class="muted" style="font-size:12px;margin-top:6px;">
@@ -824,8 +826,15 @@ function openTurnDock(){
           </div>
         </div>
 
-        <div id="t_atkOut" class="muted" style="font-size:12px;margin-top:8px;">No attack yet.</div>
+                <div id="t_atkOut" class="muted" style="font-size:12px;margin-top:8px;">No attack yet.</div>
       </div>
+    </div>
+  </div>
+`,
+actions: [
+  { label: "Resolve Turn", variant: "primary", onClick: ()=> resolveTurnFromDock(round) },
+  { label: "Cancel", variant: "ghost", onClick: hideDock }
+]
     `,
     actions: [
       { label: "Resolve Turn", variant: "primary", onClick: ()=> resolveTurnFromDock(round) },
