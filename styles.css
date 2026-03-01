@@ -97,6 +97,7 @@ select:focus,input:focus{
   display:flex;
   flex-direction:column;
   min-height: calc(100vh - 88px);
+    position: relative;
 }
 
 .sceneViewport{
@@ -311,4 +312,31 @@ select:focus,input:focus{
 select option{
   background: #0b0b0c;
   color: var(--ink);
+}
+
+/* Compact layout for floating dock */
+
+#turnDock .card{
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.08);
+  padding: 10px 12px;
+}
+
+#turnDock .grid2{
+  gap: 10px;
+}
+
+#turnDock .field span{
+  font-size: 11px;
+}
+
+#turnDock input,
+#turnDock select{
+  padding: 6px 8px;
+  font-size: 13px;
+}
+
+#turnDock .btn{
+  padding: 6px 12px;
+  font-size: 13px;
 }
