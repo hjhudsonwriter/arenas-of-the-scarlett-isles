@@ -105,12 +105,12 @@
     "title": "Round 3 — Wyvern Rite (Finale)",
     "scene": {
       "base": "assets/maps/swyth_wyvern_rite_round_5.png",
-      "overlay_boss": "assets/wyvern.png",
+      "overlay_boss": "assets/wyvern_standard.png",
       "overlays": {
         "pc_hit": "assets/wyvern_hit.png",
         "pc_fail_variants": [
           "assets/wyvern_slash.png",
-          "assets/wyvern_tail-strike.png"
+          "assets/wyvern_tail_strike.png"
         ]
       }
     },
