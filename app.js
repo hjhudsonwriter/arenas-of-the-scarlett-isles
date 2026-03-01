@@ -830,11 +830,7 @@ function openTurnDock(){
       </div>
     </div>
   </div>
-`,
-actions: [
-  { label: "Resolve Turn", variant: "primary", onClick: ()=> resolveTurnFromDock(round) },
-  { label: "Cancel", variant: "ghost", onClick: hideDock }
-]
+
     `,
     actions: [
       { label: "Resolve Turn", variant: "primary", onClick: ()=> resolveTurnFromDock(round) },
