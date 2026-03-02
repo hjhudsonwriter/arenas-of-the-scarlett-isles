@@ -771,8 +771,6 @@ function openTurnDock(){
 </div>
       </div>
 
-      <div style="height:10px"></div>
-
   <div class="dockSplit">
     <div class="dockCol">
       <div class="card">
@@ -838,7 +836,6 @@ function openTurnDock(){
       </div>
     </div>
   </div>
-
     `,
     actions: [
       { label: "Resolve Turn", variant: "primary", onClick: ()=> resolveTurnFromDock(round) },
