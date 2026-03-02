@@ -771,69 +771,74 @@ function openTurnDock(){
 </div>
       </div>
 
-  <div class="dockSplit">
-    <div class="dockCol">
-      <div class="card">
-        <div><strong>1) Skill Check</strong></div>
-        <div class="grid2" style="margin-top:10px;">
-          <label class="field">
-            <span>Approach</span>
-            <select id="t_action">${actionOptions}</select>
-          </label>
-          <label class="field">
-            <span>DC</span>
-            <select id="t_dc">
-              <option value="easy">Easy (${sc.dcs.easy})</option>
-              <option value="standard" selected>Standard (${sc.dcs.standard})</option>
-              <option value="hard">Hard (${sc.dcs.hard})</option>
-            </select>
-          </label>
-        </div>
-        <div class="grid2" style="margin-top:10px;">
-          <label class="field">
-            <span>Skill Modifier</span>
-            <input id="t_skillMod" type="number" value="0" />
-          </label>
-          <div class="field">
-            <span>Roll</span>
-            <button id="t_skillRoll" class="btn btn--primary" type="button">Roll d20</button>
-          </div>
-        </div>
-        <div id="t_skillOut" class="muted" style="font-size:12px;margin-top:8px;">No roll yet.</div>
+    <div class="dockSplit">
+    <div class="dockPane">
+      <div class="dockPaneTitle">Skill Check</div>
+
+      <div class="grid2">
+        <label class="field">
+          <span>Approach</span>
+          <select id="t_action">${actionOptions}</select>
+        </label>
+
+        <label class="field">
+          <span>DC</span>
+          <select id="t_dc">
+            <option value="easy">Easy (${sc.dcs.easy})</option>
+            <option value="standard" selected>Standard (${sc.dcs.standard})</option>
+            <option value="hard">Hard (${sc.dcs.hard})</option>
+          </select>
+        </label>
       </div>
 
-          </div>
-    <div class="dockCol">
-      <div class="card">
-        <div><strong>2) Attack Roll</strong></div>
-        <div class="muted" style="font-size:12px;margin-top:6px;">
-          Hit DC: <span class="kbd">${atk.hit_dc}</span> | Default damage: <span class="kbd">${escapeHtml(atk.default_damage)}</span>
-        </div>
+      <div class="grid2" style="margin-top:8px;">
+        <label class="field">
+          <span>Modifier</span>
+          <input id="t_skillMod" type="number" value="0" />
+        </label>
 
-        <div class="grid2" style="margin-top:10px;">
-          <label class="field">
-            <span>Attack Modifier</span>
-            <input id="t_atkMod" type="number" value="0" />
-          </label>
-          <div class="field">
-            <span>Roll</span>
-            <button id="t_atkRoll" class="btn btn--primary" type="button">Roll d20</button>
-          </div>
+        <div class="field">
+          <span>Roll</span>
+          <button id="t_skillRoll" class="btn btn--primary" type="button">Roll d20</button>
         </div>
-
-        <div class="grid2" style="margin-top:10px;">
-          <label class="field">
-            <span>Damage (dice like 2d8 or number)</span>
-            <input id="t_dmg" value="${escapeHtml(atk.default_damage)}" />
-          </label>
-          <div class="field">
-            <span>Apply Damage</span>
-            <button id="t_applyDmg" class="btn btn--ghost" type="button">Apply</button>
-          </div>
-        </div>
-
-                <div id="t_atkOut" class="muted" style="font-size:12px;margin-top:8px;">No attack yet.</div>
       </div>
+
+      <div id="t_skillOut" class="muted" style="font-size:12px;margin-top:8px;">No roll yet.</div>
+    </div>
+
+    <div class="dockPane">
+      <div class="dockPaneTitle">Attack Roll</div>
+      <div class="dockMeta">
+        Hit DC: <span class="kbd">${atk.hit_dc}</span>
+        &nbsp;|&nbsp;
+        Default damage: <span class="kbd">${escapeHtml(atk.default_damage)}</span>
+      </div>
+
+      <div class="grid2">
+        <label class="field">
+          <span>Modifier</span>
+          <input id="t_atkMod" type="number" value="0" />
+        </label>
+
+        <div class="field">
+          <span>Roll</span>
+          <button id="t_atkRoll" class="btn btn--primary" type="button">Roll d20</button>
+        </div>
+      </div>
+
+      <div class="grid2" style="margin-top:8px;">
+        <label class="field">
+          <span>Damage</span>
+          <input id="t_dmg" value="${escapeHtml(atk.default_damage)}" />
+        </label>
+
+        <div class="field">
+          <span>Apply</span>
+          <button id="t_applyDmg" class="btn btn--ghost" type="button">Apply</button>
+        </div>
+      </div>
+
+      <div id="t_atkOut" class="muted" style="font-size:12px;margin-top:8px;">No attack yet.</div>
     </div>
   </div>
     `,
