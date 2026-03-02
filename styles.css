@@ -147,7 +147,7 @@ select:focus,input:focus{
 /* Dock lane that sits between the image and the footer */
 .dockLane{
   flex: 0 0 auto;
-  height: 320px;              /* was 190px: too short to show the split layout */
+  height: 360px;              /* was 190px: too short to show the split layout */
   padding: 10px 10px 12px;
   border-top: 1px solid var(--line);
   background: rgba(0,0,0,.22);
