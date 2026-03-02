@@ -791,7 +791,7 @@ function openTurnDock(){
         </label>
       </div>
 
-      <div class="grid2" style="margin-top:8px;">
+      <div class="grid2" style="margin-top:6px;">
         <label class="field">
           <span>Modifier</span>
           <input id="t_skillMod" type="number" value="0" />
@@ -803,7 +803,7 @@ function openTurnDock(){
         </div>
       </div>
 
-      <div id="t_skillOut" class="muted" style="font-size:12px;margin-top:8px;">No roll yet.</div>
+      <div id="t_skillOut" class="muted" style="font-size:12px;margin-top:6px;">No roll yet.</div>
     </div>
 
     <div class="dockPane">
@@ -838,7 +838,7 @@ function openTurnDock(){
         </div>
       </div>
 
-      <div id="t_atkOut" class="muted" style="font-size:12px;margin-top:8px;">No attack yet.</div>
+      <div id="t_atkOut" class="muted" style="font-size:12px;margin-top:6px;">No attack yet.</div>
     </div>
   </div>
     `,
