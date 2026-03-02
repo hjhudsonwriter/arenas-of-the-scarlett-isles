@@ -147,7 +147,7 @@ select:focus,input:focus{
 /* Dock lane that sits between the image and the footer */
 .dockLane{
   flex: 0 0 auto;
-  height: 190px;              /* adjust 170–220 if you want */
+  height: 260px;              /* adjust 170–220 if you want */
   padding: 10px 10px 12px;
   border-top: 1px solid var(--line);
   background: rgba(0,0,0,.22);
@@ -274,10 +274,12 @@ select:focus,input:focus{
 
 /* Dock body should scroll if content is taller than the dock */
 #dockBody{
-  overflow: auto;
+  overflow: hidden;     /* NO SCROLL */
   flex: 1;
-  min-height: 0; /* critical for scroll to work in a flex container */
-  padding-right: 6px; /* keeps scrollbar off the content */
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
 /* Header smaller */
@@ -352,6 +354,35 @@ select option{
   font-size: 13px;
 }
 
+/* Turn Dock: two-column layout (NO SCROLL) */
+.dockSplit{
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  align-items: start;
+}
+
+.dockPane{
+  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.03);
+  border-radius: 12px;
+  padding: 10px 10px 8px;
+}
+
+.dockPaneTitle{
+  font-weight: 900;
+  font-size: 12px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin-bottom: 8px;
+}
+
+.dockMeta{
+  font-size: 11px;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
 /* ===========================
    MODALS: prevent cut-off
    =========================== */
