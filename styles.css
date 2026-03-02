@@ -244,7 +244,7 @@ select:focus,input:focus{
   bottom: 40px;
   transform: translateX(-50%);
   width: min(1000px, 92%);
-  max-height: 260px;
+  max-height: min(72vh, 640px);
 
   display: flex;
   flex-direction: column;
@@ -262,9 +262,12 @@ select:focus,input:focus{
   z-index: 40;
 }
 
-/* Prevent internal scroll */
+/* Dock body should scroll if content is taller than the dock */
 #dockBody{
-  overflow: visible;
+  overflow: auto;
+  flex: 1;
+  min-height: 0; /* critical for scroll to work in a flex container */
+  padding-right: 6px; /* keeps scrollbar off the content */
 }
 
 /* Header smaller */
@@ -303,9 +306,7 @@ select:focus,input:focus{
 @media (max-width: 1024px){
   .layout{ grid-template-columns: 1fr; }
   .sidePanel{ min-height: 520px; }
-    .turnDock{
-    max-height: 50vh;
-  }
+  #turnDock{ max-height: 75vh; }
 }
 
 /* Ensure dropdown options are readable across browsers */
