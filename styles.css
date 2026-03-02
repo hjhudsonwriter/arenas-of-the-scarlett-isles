@@ -409,3 +409,27 @@ select option{
   gap:10px;
   background: rgba(0,0,0,.22);
 }
+
+/* Two-column Turn Dock layout (Skill left, Attack right) */
+.dockSplit{
+  display:grid;
+  grid-template-columns: 1fr 1fr;
+  gap:12px;
+  height: 100%;
+}
+
+.dockCol{
+  height: 100%;
+  overflow: auto;
+  border: 1px solid rgba(255,255,255,0.10);
+  border-radius: 12px;
+  padding: 10px 12px;
+  background: rgba(0,0,0,0.25);
+}
+
+/* Make cards blend nicely inside the columns */
+.dockCol .card{
+  background: transparent;
+  border: 0;
+  padding: 0;
+}
