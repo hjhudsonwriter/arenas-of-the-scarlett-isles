@@ -147,11 +147,11 @@ select:focus,input:focus{
 /* Dock lane that sits between the image and the footer */
 .dockLane{
   flex: 0 0 auto;
-  height: 260px;              /* adjust 170–220 if you want */
+  height: 320px;              /* was 190px: too short to show the split layout */
   padding: 10px 10px 12px;
   border-top: 1px solid var(--line);
   background: rgba(0,0,0,.22);
-  overflow: hidden;
+  overflow: hidden;           /* keep this: we do NOT want scrolling */
 }
 
 .mapFooter{
@@ -274,12 +274,10 @@ select:focus,input:focus{
 
 /* Dock body should scroll if content is taller than the dock */
 #dockBody{
-  overflow: hidden;     /* NO SCROLL */
+  overflow: hidden;  /* no scrolling in dock */
   flex: 1;
   min-height: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
+  padding-right: 0;
 }
 
 /* Header smaller */
@@ -356,10 +354,11 @@ select option{
 
 /* Turn Dock: two-column layout (NO SCROLL) */
 .dockSplit{
-  display: grid;
+  display:grid;
   grid-template-columns: 1fr 1fr;
-  gap: 12px;
-  align-items: start;
+  gap:12px;
+  align-items:start;
+  /* removed height:100% so the split can size naturally */
 }
 
 .dockPane{
@@ -450,8 +449,7 @@ select option{
 }
 
 .dockCol{
-  height: 100%;
-  overflow: auto;
+  overflow: hidden; /* no scrolling */
   border: 1px solid rgba(255,255,255,0.10);
   border-radius: 12px;
   padding: 10px 12px;
