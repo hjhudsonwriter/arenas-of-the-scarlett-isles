@@ -59,12 +59,13 @@
       "base": "assets/maps/swyth_beast_pen_round_4.png",
       "overlay_boss": "assets/overlays/beast_pen_standard.png",
       "overlays": {
-        "pc_hit": "assets/overlays/beast_pen_hit.png",
-        "pc_fail_variants": [
-          "assets/overlays/beast_pen_fail_1.png",
-          "assets/overlays/beast_pen_fail_2.png"
-        ]
-      }
+        "overlays": {
+  "pc_hit": "assets/overlays/beast_pen_hit_standard.png",
+  "pc_fail_variants": [
+    "assets/overlays/beast_pen_boar_fail_standard.png",
+    "assets/overlays/beast_pen_hyena_fail_standard.png"
+  ]
+}
     },
     "reward_gp": 5000,
     "skill_challenge": {
