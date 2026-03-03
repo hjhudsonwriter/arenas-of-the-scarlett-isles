@@ -108,9 +108,8 @@ select:focus,input:focus{
   align-items:center;
   justify-content:center;
   overflow:hidden;
-  height: calc(100vh - 92px - 320px); /* viewport minus topbar minus dockLane */
-  min-height: 360px;
-  max-height: 620px;
+  flex: 1 1 auto;      /* take remaining space */
+  min-height: 220px;   /* never collapse too far */
 }
 
 .sceneBase{
@@ -145,11 +144,16 @@ select:focus,input:focus{
 /* Dock lane that sits between the image and the footer */
 .dockLane{
   flex: 0 0 auto;
-  height: 360px;              /* was 190px: too short to show the split layout */
+
+  /* Always fully visible: never taller than the remaining viewport */
+  height: auto;
+  max-height: calc(100vh - 92px - 220px);  /* viewport - topbar - minimum scene */
+  min-height: 240px;                       /* keeps dock usable */
+
   padding: 10px 10px 12px;
   border-top: 1px solid var(--line);
   background: rgba(0,0,0,.22);
-  overflow: hidden;           /* keep this: we do NOT want scrolling */
+  overflow: hidden;
 }
 
 .mapFooter{
