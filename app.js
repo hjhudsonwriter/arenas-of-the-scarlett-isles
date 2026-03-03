@@ -97,6 +97,9 @@ const state = {
   // Round 1 ("Arena Duelists") defeated-state tracking:
   // null = both alive, 1 = duelist 1 dropped first, 2 = duelist 2 dropped first
   r1FirstDefeated: null,
+     // Round 2 / Beast-Pen (round id "r4") defeated-state tracking:
+  // boar = Razor-Boar, hyena1/hyena2 = Hooked Hyenas (slots 1 and 2)
+  r4Dead: { boar:false, hyena1:false, hyena2:false },
 };
 
 function uid(prefix="id"){
@@ -306,6 +309,9 @@ function getPersistentBossOverlaySrc(round){
   if(!round || !state.runActive) return "";
 
   // Non-R1: whatever arenas.json says is the standard boss overlay.
+    if(round.id === "r4") return getR4PersistentBossOverlaySrc(round);
+
+  // Non-R1/R4: whatever arenas.json says is the standard boss overlay.
   if(round.id !== "r1") return round.scene?.overlay_boss || "";
 
   // R1: if one duelist has dropped, switch to defeated overlay.
@@ -319,6 +325,7 @@ function getPersistentBossOverlaySrc(round){
 function getHitOverlaySrc(round){
   const ov = round.scene?.overlays || {};
 
+    if(round.id === "r4") return getR4HitOverlaySrc(round);
   if(round.id !== "r1") return ov.pc_hit;
 
   syncR1FirstDefeatedFromHp();
@@ -335,6 +342,7 @@ function getHitOverlaySrc(round){
 function getFailOverlaySrc(round){
   const ov = round.scene?.overlays || {};
 
+    if(round.id === "r4") return getR4FailOverlaySrc(round);
   if(round.id !== "r1") return ov.pc_fail;
 
   syncR1FirstDefeatedFromHp();
@@ -345,6 +353,166 @@ function getFailOverlaySrc(round){
   if(remain === 2) return R1_OVERLAYS.fail_2;
 
   // Before any death: keep your existing Round 1 fail overlay from arenas.json.
+  return ov.pc_fail;
+}
+/* =========================
+   Round 2 ("Beast-Pen", id "r4") death-state overlays
+   ========================= */
+
+const R4_OVERLAYS = {
+  // persistent standards
+  standard:               "assets/overlays/beast_pen_standard.png",
+  standard_boar_dead:     "assets/overlays/beast_pen_standard_boar_dead.png",
+  standard_hyena_1_dead:  "assets/overlays/beast_pen_standard_hyena_1_dead.png",
+  standard_hyena_2_dead:  "assets/overlays/beast_pen_standard_hyena_2_dead.png",
+  standard_hyena_both_dead:"assets/overlays/beast_pen_standard_hyena_both_dead.png",
+  standard_boar_hyena_dead:"assets/overlays/beast_pen_standard_boar_hyena_dead.png",
+
+  // hits
+  hit_standard:           "assets/overlays/beast_pen_hit_standard.png",
+  hit_boar_dead:          "assets/overlays/beast_pen_hit_boar_dead.png",
+  hit_hyena_dead:         "assets/overlays/beast_pen_hit_hyena_dead.png",        // use when either hyena is dead
+  hit_hyena_both_dead:    "assets/overlays/beast_pen_hit_hyena_both_dead.png",
+  hit_boar_hyena_dead:    "assets/overlays/beast_pen_hit_boar_hyena_dead.png",
+
+  // fails (boar-attacks family)
+  boar_fail_standard:       "assets/overlays/beast_pen_boar_fail_standard.png",
+  boar_fail_hyena_1_dead:   "assets/overlays/beast_pen_boar_fail_hyena_1_dead.png",
+  boar_fail_hyena_2_dead:   "assets/overlays/beast_pen_boar_fail_hyena_2_dead.png",
+  boar_fail_hyena_both_dead:"assets/overlays/beast_pen_boar_fail_hyena_both_dead.png",
+
+  // fails (hyena-attacks family)
+  hyena_fail_standard:        "assets/overlays/beast_pen_hyena_fail_standard.png",
+  hyena_fail_hyena_dead:      "assets/overlays/beast_pen_hyena_fail_hyena_dead.png",
+  hyena_fail_hyena_boar_dead: "assets/overlays/beast_pen_hyena_fail_hyena_boar_dead.png",
+};
+
+function ensureR4Slots(){
+  const r = getRound();
+  if(!r || r.id !== "r4") return;
+
+  // Hyenas should have _slot 1 and 2 (for "hyena_1" / "hyena_2" overlays).
+  const hyenas = state.enemies.filter(e =>
+    e.maxHp != null && (e.defId === "hooked_hyena" || /hyena/i.test(e.name || ""))
+  );
+
+  const already = hyenas.filter(h => h._slot === 1 || h._slot === 2);
+  if(already.length >= 2) return;
+
+  for(let i=0;i<Math.min(2, hyenas.length);i++){
+    if(hyenas[i]._slot == null) hyenas[i]._slot = i + 1;
+  }
+}
+
+function markR4Dead(enemy){
+  if(!enemy) return;
+  if(!state.r4Dead) state.r4Dead = { boar:false, hyena1:false, hyena2:false };
+
+  ensureR4Slots();
+
+  const def = enemy.defId || "";
+  const name = enemy.name || "";
+  const isBoar = (def === "razor_boar") || /boar/i.test(name);
+  const isHyena = (def === "hooked_hyena") || /hyena/i.test(name);
+
+  if(isBoar) state.r4Dead.boar = true;
+
+  if(isHyena){
+    if(enemy._slot === 2) state.r4Dead.hyena2 = true;
+    else state.r4Dead.hyena1 = true; // default slot 1
+  }
+}
+
+function syncR4DeathsFromHp(){
+  const r = getRound();
+  if(!r || r.id !== "r4") return;
+
+  ensureR4Slots();
+
+  for(const e of state.enemies){
+    if(!e.maxHp) continue;
+    if((e.hp ?? 0) <= 0) markR4Dead(e);
+  }
+}
+
+function getR4DeadSummary(){
+  syncR4DeathsFromHp();
+  const d = state.r4Dead || { boar:false, hyena1:false, hyena2:false };
+  const hyDeadCount = (d.hyena1 ? 1 : 0) + (d.hyena2 ? 1 : 0);
+  return { boarDead: !!d.boar, hy1Dead: !!d.hyena1, hy2Dead: !!d.hyena2, hyDeadCount };
+}
+
+function getR4PersistentBossOverlaySrc(round){
+  const s = getR4DeadSummary();
+
+  if(!s.boarDead && s.hyDeadCount === 0) return round.scene?.overlay_boss || R4_OVERLAYS.standard;
+
+  if(s.boarDead && s.hyDeadCount === 0) return R4_OVERLAYS.standard_boar_dead;
+
+  if(!s.boarDead && s.hyDeadCount === 1){
+    return s.hy2Dead ? R4_OVERLAYS.standard_hyena_2_dead : R4_OVERLAYS.standard_hyena_1_dead;
+  }
+
+  if(!s.boarDead && s.hyDeadCount >= 2) return R4_OVERLAYS.standard_hyena_both_dead;
+
+  // boar dead + (one or both) hyenas dead -> use the combined overlay you named
+  if(s.boarDead && s.hyDeadCount >= 1) return R4_OVERLAYS.standard_boar_hyena_dead;
+
+  return round.scene?.overlay_boss || R4_OVERLAYS.standard;
+}
+
+function getR4HitOverlaySrc(round){
+  const ov = round.scene?.overlays || {};
+  const s = getR4DeadSummary();
+
+  // Before any deaths, use arenas.json's "pc_hit" (now beast_pen_hit_standard.png)
+  if(!s.boarDead && s.hyDeadCount === 0) return ov.pc_hit || R4_OVERLAYS.hit_standard;
+
+  if(s.boarDead && s.hyDeadCount === 0) return R4_OVERLAYS.hit_boar_dead;
+
+  if(!s.boarDead && s.hyDeadCount === 1) return R4_OVERLAYS.hit_hyena_dead;
+
+  if(!s.boarDead && s.hyDeadCount >= 2) return R4_OVERLAYS.hit_hyena_both_dead;
+
+  if(s.boarDead && s.hyDeadCount >= 1) return R4_OVERLAYS.hit_boar_hyena_dead;
+
+  return ov.pc_hit || R4_OVERLAYS.hit_standard;
+}
+
+function getR4FailOverlaySrc(round){
+  const s = getR4DeadSummary();
+
+  // Weighted attacker pool based on what is still alive:
+  // boar counts once; each living hyena counts once.
+  const pool = [];
+  if(!s.boarDead) pool.push("boar");
+  const hyAlive = Math.max(0, 2 - s.hyDeadCount);
+  for(let i=0;i<hyAlive;i++) pool.push("hyena");
+
+  const attacker = pool.length ? pool[Math.floor(Math.random()*pool.length)] : null;
+
+  if(attacker === "boar"){
+    if(s.hyDeadCount === 0) return R4_OVERLAYS.boar_fail_standard;
+    if(s.hyDeadCount === 1){
+      return s.hy2Dead ? R4_OVERLAYS.boar_fail_hyena_2_dead : R4_OVERLAYS.boar_fail_hyena_1_dead;
+    }
+    return R4_OVERLAYS.boar_fail_hyena_both_dead;
+  }
+
+  if(attacker === "hyena"){
+    // Special file you provided for "boar dead + one hyena dead"
+    if(s.boarDead && s.hyDeadCount === 1) return R4_OVERLAYS.hyena_fail_hyena_boar_dead;
+
+    // One hyena dead (boar still alive) -> your generic hyena_dead file
+    if(s.hyDeadCount === 1) return R4_OVERLAYS.hyena_fail_hyena_dead;
+
+    // Otherwise (no deaths OR boar-only dead), fall back to hyena standard
+    return R4_OVERLAYS.hyena_fail_standard;
+  }
+
+  // absolute fallback
+  const ov = round.scene?.overlays || {};
+  if(Array.isArray(ov.pc_fail_variants) && ov.pc_fail_variants.length) return ov.pc_fail_variants[0];
   return ov.pc_fail;
 }
 function setScene(){
@@ -561,14 +729,19 @@ function renderEnemyList(){
       if(!(t instanceof HTMLElement)) return;
 
       const r = getRound();
-      const isR1 = r && r.id === "r1";
+            const isR1 = r && r.id === "r1";
+      const isR4 = r && r.id === "r4";
       if(isR1) ensureR1Slots();
+      if(isR4) ensureR4Slots();
 
       if(t.dataset.dmg && e.maxHp){
         e.hp = clamp(e.hp - parseInt(t.dataset.dmg,10), 0, e.maxHp);
 
         if(isR1 && !state.r1FirstDefeated && (e._slot === 1 || e._slot === 2) && e.hp === 0){
           state.r1FirstDefeated = e._slot;
+        }
+                 if(isR4 && e.hp === 0){
+          markR4Dead(e);
         }
 
         renderEnemyList();
@@ -587,6 +760,9 @@ function renderEnemyList(){
         if(isR1 && !state.r1FirstDefeated && (e._slot === 1 || e._slot === 2) && e.hp === 0){
           state.r1FirstDefeated = e._slot;
         }
+                 if(isR4 && e.hp === 0){
+          markR4Dead(e);
+        }
 
         renderEnemyList();
         syncBossOverlayNow();
@@ -595,6 +771,9 @@ function renderEnemyList(){
         // Treat removing a duelist as "defeated" for the purposes of the persistent overlay.
         if(isR1 && !state.r1FirstDefeated && (e._slot === 1 || e._slot === 2)){
           state.r1FirstDefeated = e._slot;
+        }
+                 if(isR4){
+          markR4Dead(e);
         }
 
         state.enemies = state.enemies.filter(x=>x.id !== e.id);
@@ -614,6 +793,7 @@ function resetRunState(msg="Run reset."){
   state.failures = 0;
   state.enemies = [];
   state.r1FirstDefeated = null; 
+    state.r4Dead = { boar:false, hyena1:false, hyena2:false }; 
   renderEnemyList();
   renderHeaderStats();
   setStatus(msg);
@@ -633,6 +813,8 @@ function startRound(roundId){
   state.failures = 0;
   state.turnIndex = 0; 
   state.r1FirstDefeated = null; 
+    state.r4Dead = { boar:false, hyena1:false, hyena2:false }; 
+   
 
   // per-round flags
   for(const p of state.players){
@@ -664,19 +846,25 @@ function applyFailureToPlayer(p, round){
   const dmg = rollDice(sc.damage_on_failure);
   p.hp = clamp(p.hp - dmg.total, 0, p.maxHp);
 
-      const ov = round.scene?.overlays || {};
+        const ov = round.scene?.overlays || {};
 
   // Default: keep your existing behaviour (including arenas.json variants).
   let failSrc = ov.pc_fail;
 
-  // Round 1: if a duelist has been defeated, switch to the remaining-duelist fail overlay.
-  if(round.id === "r1"){
+  // Round 2 / Beast-Pen (id "r4"): fail overlay depends on which beasts are dead + which beast attacks.
+  if(round.id === "r4"){
+    failSrc = getFailOverlaySrc(round);
+
+  // Round 1 special behaviour (unchanged)
+  }else if(round.id === "r1"){
     syncR1FirstDefeatedFromHp();
     if(state.r1FirstDefeated){
       failSrc = getFailOverlaySrc(round);
     }else if(Array.isArray(ov.pc_fail_variants) && ov.pc_fail_variants.length){
       failSrc = ov.pc_fail_variants[Math.floor(Math.random() * ov.pc_fail_variants.length)];
     }
+
+  // Other rounds: random variant from arenas.json (unchanged)
   }else if(Array.isArray(ov.pc_fail_variants) && ov.pc_fail_variants.length){
     failSrc = ov.pc_fail_variants[Math.floor(Math.random() * ov.pc_fail_variants.length)];
   }
@@ -1106,6 +1294,9 @@ function openTurnDock(){
         // Round 1: the first duelist to hit 0 becomes the defeated-state that persists.
         if(round.id === "r1" && !state.r1FirstDefeated && (target._slot === 1 || target._slot === 2)){
           state.r1FirstDefeated = target._slot;
+        }
+                 if(round.id === "r4"){
+          markR4Dead(target);
         }
       }
     }
