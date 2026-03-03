@@ -92,7 +92,11 @@ const state = {
   turnIndex: 0,
   successes: 0,
   failures: 0,
-  enemies: [], // {id,name,hp,maxHp,defId}
+    enemies: [], // {id,name,hp,maxHp,defId}
+
+  // Round 1 ("Arena Duelists") defeated-state tracking:
+  // null = both alive, 1 = duelist 1 dropped first, 2 = duelist 2 dropped first
+  r1FirstDefeated: null,
 };
 
 function uid(prefix="id"){
@@ -248,13 +252,108 @@ function renderHeaderStats(){
   $("#turnCount").textContent = String(state.turn);
 }
 
+/* =========================
+   Round 1 ("Arena Duelists") defeated-state overlays
+   ========================= */
+
+const R1_OVERLAYS = {
+  defeated_1: "assets/overlays/arena_duelists_defeated_1.png",
+  defeated_2: "assets/overlays/arena_duelists_defeated_2.png",
+  hit_1:      "assets/overlays/arena_duelists_hit_1.png",
+  hit_2:      "assets/overlays/arena_duelists_hit_2.png",
+  fail_1:     "assets/overlays/arena_duelists_fail_1.png",
+  fail_2:     "assets/overlays/arena_duelists_fail_2.png",
+};
+
+function ensureR1Slots(){
+  const r = getRound();
+  if(!r || r.id !== "r1") return;
+
+  // If _slot already exists for 1 and 2, keep it.
+  const hpEnemies = state.enemies.filter(e => e.maxHp != null);
+  const already = hpEnemies.filter(e => e._slot === 1 || e._slot === 2);
+  if(already.length >= 2) return;
+
+  // Otherwise assign the first two HP enemies as duelist 1 and 2.
+  for(let i=0;i<Math.min(2, hpEnemies.length);i++){
+    if(hpEnemies[i]._slot == null) hpEnemies[i]._slot = i + 1;
+  }
+}
+
+function syncR1FirstDefeatedFromHp(){
+  const r = getRound();
+  if(!r || r.id !== "r1") return;
+  if(state.r1FirstDefeated) return;
+
+  ensureR1Slots();
+
+  const duelists = state.enemies.filter(e => e.maxHp != null && (e._slot === 1 || e._slot === 2));
+  for(const e of duelists){
+    if((e.hp ?? 0) <= 0){
+      state.r1FirstDefeated = e._slot;
+      break;
+    }
+  }
+}
+
+function getR1RemainingSlot(){
+  if(state.r1FirstDefeated === 1) return 2;
+  if(state.r1FirstDefeated === 2) return 1;
+  return null;
+}
+
+function getPersistentBossOverlaySrc(round){
+  if(!round || !state.runActive) return "";
+
+  // Non-R1: whatever arenas.json says is the standard boss overlay.
+  if(round.id !== "r1") return round.scene?.overlay_boss || "";
+
+  // R1: if one duelist has dropped, switch to defeated overlay.
+  syncR1FirstDefeatedFromHp();
+  if(state.r1FirstDefeated === 1) return R1_OVERLAYS.defeated_1;
+  if(state.r1FirstDefeated === 2) return R1_OVERLAYS.defeated_2;
+
+  return round.scene?.overlay_boss || "";
+}
+
+function getHitOverlaySrc(round){
+  const ov = round.scene?.overlays || {};
+
+  if(round.id !== "r1") return ov.pc_hit;
+
+  syncR1FirstDefeatedFromHp();
+  const remain = getR1RemainingSlot();
+
+  // After first death: only show the remaining-duelist hit overlay.
+  if(remain === 1) return R1_OVERLAYS.hit_1;
+  if(remain === 2) return R1_OVERLAYS.hit_2;
+
+  // Before any death: keep your existing Round 1 hit overlay from arenas.json.
+  return ov.pc_hit;
+}
+
+function getFailOverlaySrc(round){
+  const ov = round.scene?.overlays || {};
+
+  if(round.id !== "r1") return ov.pc_fail;
+
+  syncR1FirstDefeatedFromHp();
+  const remain = getR1RemainingSlot();
+
+  // After first death: only show the remaining-duelist fail overlay.
+  if(remain === 1) return R1_OVERLAYS.fail_1;
+  if(remain === 2) return R1_OVERLAYS.fail_2;
+
+  // Before any death: keep your existing Round 1 fail overlay from arenas.json.
+  return ov.pc_fail;
+}
 function setScene(){
   const r = getRound();
   if(!r) return;
 
   $("#sceneBase").src = r.scene?.base || "";
     const boss = $("#sceneBoss");
-  const bossSrc = r.scene?.overlay_boss || "";
+    const bossSrc = getPersistentBossOverlaySrc(r) || "";
 
   // IMPORTANT: Only show the "standard/opponents present" overlay once the run is active.
   if(state.runActive && bossSrc){
@@ -271,6 +370,23 @@ function setScene(){
 let overlayTimer = null;
 let bossRestoreTimer = null;
 let bossPrevSrc = "";
+function syncBossOverlayNow(){
+  const r = getRound();
+  const boss = $("#sceneBoss");
+  if(!boss || !r) return;
+
+  // If a temporary overlay is active, let showOverlay restore naturally.
+  if(bossRestoreTimer) return;
+
+  const src = getPersistentBossOverlaySrc(r);
+  if(state.runActive && src){
+    boss.src = src;
+    boss.classList.remove("hidden");
+  }else{
+    boss.classList.add("hidden");
+    boss.removeAttribute("src");
+  }
+}
 function showOverlay(src, ms=5200){
   // Replace the "boss" overlay temporarily (no stacking)
   if(!src) return;
@@ -289,7 +405,7 @@ function showOverlay(src, ms=5200){
   if(bossRestoreTimer) clearTimeout(bossRestoreTimer);
   bossRestoreTimer = setTimeout(()=>{
     const r = getRound();
-    const standard = (state.runActive ? (r.scene?.overlay_boss || "") : "");
+    const standard = getPersistentBossOverlaySrc(r);
 
     bossPrevSrc = "";
     if(standard){
@@ -374,13 +490,23 @@ function spawnEnemiesForRound(round){
     for(let i=0;i<(def.count||1);i++){
       const id = uid("e");
       const name = (def.count||1) > 1 ? `${def.name} ${i+1}` : def.name;
-      state.enemies.push({
+            state.enemies.push({
         id,
         defId: def.id || def.name,
         name,
         maxHp: def.hp ?? null,
-        hp: def.hp ?? null
+        hp: def.hp ?? null,
+
+        // If a definition spawns multiple copies (count > 1), track which copy this is (1,2,3...).
+        _slot: (def.count || 1) > 1 ? (i + 1) : null
       });
+    }
+  }
+     // Round 1: ensure the two duelists are always slotted as 1 and 2.
+  if(round.id === "r1"){
+    const hpEnemies = state.enemies.filter(e => e.maxHp != null);
+    for(let i=0;i<Math.min(2, hpEnemies.length);i++){
+      if(hpEnemies[i]._slot == null) hpEnemies[i]._slot = i + 1;
     }
   }
 }
@@ -430,24 +556,50 @@ function renderEnemyList(){
 
     host.appendChild(card);
 
-    card.addEventListener("click", (ev)=>{
+        card.addEventListener("click", (ev)=>{
       const t = ev.target;
       if(!(t instanceof HTMLElement)) return;
 
+      const r = getRound();
+      const isR1 = r && r.id === "r1";
+      if(isR1) ensureR1Slots();
+
       if(t.dataset.dmg && e.maxHp){
         e.hp = clamp(e.hp - parseInt(t.dataset.dmg,10), 0, e.maxHp);
+
+        if(isR1 && !state.r1FirstDefeated && (e._slot === 1 || e._slot === 2) && e.hp === 0){
+          state.r1FirstDefeated = e._slot;
+        }
+
         renderEnemyList();
+        syncBossOverlayNow();
+
       }else if(t.dataset.heal && e.maxHp){
         e.hp = clamp(e.hp + parseInt(t.dataset.heal,10), 0, e.maxHp);
         renderEnemyList();
+        syncBossOverlayNow();
+
       }else if(t.dataset.set !== undefined && e.maxHp){
         const v = prompt(`Set HP for ${e.name} (0-${e.maxHp})`, String(e.hp));
         if(v === null) return;
         e.hp = clamp(parseInt(v,10)||0, 0, e.maxHp);
+
+        if(isR1 && !state.r1FirstDefeated && (e._slot === 1 || e._slot === 2) && e.hp === 0){
+          state.r1FirstDefeated = e._slot;
+        }
+
         renderEnemyList();
+        syncBossOverlayNow();
+
       }else if(t.dataset.remove !== undefined){
+        // Treat removing a duelist as "defeated" for the purposes of the persistent overlay.
+        if(isR1 && !state.r1FirstDefeated && (e._slot === 1 || e._slot === 2)){
+          state.r1FirstDefeated = e._slot;
+        }
+
         state.enemies = state.enemies.filter(x=>x.id !== e.id);
         renderEnemyList();
+        syncBossOverlayNow();
       }
     });
   }
@@ -461,6 +613,7 @@ function resetRunState(msg="Run reset."){
   state.successes = 0;
   state.failures = 0;
   state.enemies = [];
+  state.r1FirstDefeated = null; 
   renderEnemyList();
   renderHeaderStats();
   setStatus(msg);
@@ -479,6 +632,7 @@ function startRound(roundId){
   state.successes = 0;
   state.failures = 0;
   state.turnIndex = 0; 
+  state.r1FirstDefeated = null; 
 
   // per-round flags
   for(const p of state.players){
@@ -510,17 +664,27 @@ function applyFailureToPlayer(p, round){
   const dmg = rollDice(sc.damage_on_failure);
   p.hp = clamp(p.hp - dmg.total, 0, p.maxHp);
 
-    const ov = round.scene?.overlays || {};
+      const ov = round.scene?.overlays || {};
 
-  // If JSON provides multiple fail variants, pick one at random.
+  // Default: keep your existing behaviour (including arenas.json variants).
   let failSrc = ov.pc_fail;
-  if(Array.isArray(ov.pc_fail_variants) && ov.pc_fail_variants.length){
+
+  // Round 1: if a duelist has been defeated, switch to the remaining-duelist fail overlay.
+  if(round.id === "r1"){
+    syncR1FirstDefeatedFromHp();
+    if(state.r1FirstDefeated){
+      failSrc = getFailOverlaySrc(round);
+    }else if(Array.isArray(ov.pc_fail_variants) && ov.pc_fail_variants.length){
+      failSrc = ov.pc_fail_variants[Math.floor(Math.random() * ov.pc_fail_variants.length)];
+    }
+  }else if(Array.isArray(ov.pc_fail_variants) && ov.pc_fail_variants.length){
     failSrc = ov.pc_fail_variants[Math.floor(Math.random() * ov.pc_fail_variants.length)];
   }
 
-  showOverlay(failSrc, 950);
-    playFailSfx(round.id); 
-
+  // Keep FAIL overlays visible ~5s like HIT overlays.
+  showOverlay(failSrc, 5200);
+  playFailSfx(round.id);
+   
   log(`${p.name} failed: -${dmg.total} HP (${dmg.expr}: ${dmg.rolls.join(", ")}).`);
 }
 
@@ -928,18 +1092,25 @@ function openTurnDock(){
       return;
     }
 
-    mem.damageApplied = true;
+        mem.damageApplied = true;
     mem.lastDamage = dmg;
+
+    // Decide which HIT overlay to show BEFORE we possibly mark the first defeated duelist.
+    const hitOverlaySrc = getHitOverlaySrc(round);
 
     if(target.maxHp){
       target.hp = clamp(target.hp - dmg, 0, target.maxHp);
       if(target.hp === 0){
         log(`${target.name} is defeated.`);
+
+        // Round 1: the first duelist to hit 0 becomes the defeated-state that persists.
+        if(round.id === "r1" && !state.r1FirstDefeated && (target._slot === 1 || target._slot === 2)){
+          state.r1FirstDefeated = target._slot;
+        }
       }
     }
 
-        const ov = round.scene?.overlays || {};
-    showOverlay(ov.pc_hit, 5200);
+    showOverlay(hitOverlaySrc, 5200);
     playHitSfx(round.id);
 
     log(`Attack damage to ${target.name}: -${dmg} HP.`);
