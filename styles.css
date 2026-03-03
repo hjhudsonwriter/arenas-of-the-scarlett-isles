@@ -96,7 +96,7 @@ select:focus,input:focus{
   overflow:hidden;
   display:flex;
   flex-direction:column;
-  min-height: calc(100vh - 88px);
+  min-height:0;
     position: relative;
 }
 
