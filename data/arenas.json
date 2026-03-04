@@ -204,15 +204,24 @@
           "id": "mm_r2",
           "title": "Round 2 — The Lion Totems",
           "scene": {
-            "base": "assets/maps/middlemount_lions_crown.png",
-            "overlay_boss": "assets/overlays/lions_totems_standard.png",
-            "overlays": {
-              "pc_hit": "assets/overlays/lions_totems_hit.png",
-              "pc_fail_variants": [
-                "assets/overlays/lions_totems_fail.png"
-              ]
-            }
-          },
+  "base": "assets/maps/middlemount_lions_crown.png",
+
+  "overlay_boss": "assets/overlays/lion_swordsman_standard.png",
+  "overlays": {
+    "pc_hit": "assets/overlays/lion_swordsman_hit.png",
+    "pc_fail_variants": [
+      "assets/overlays/lion_swordsman_fail.png"
+    ]
+  },
+
+  "secondary_overlay_boss": "assets/overlays/lions_totems_standard.png",
+  "secondary_overlays": {
+    "pc_hit": "assets/overlays/lions_totems_hit.png",
+    "pc_fail_variants": [
+      "assets/overlays/lions_totems_fail.png"
+    ]
+  }
+},
           "reward_gp": 8000,
           "skill_challenge": {
             "target_successes": 8,
@@ -242,9 +251,9 @@
             "default_damage": "2d10"
           },
           "enemies": [
-            { "id": "lion_totem", "name": "Lion Totem", "count": 3, "hp": 45 },
-            { "id": "bacca_guardian", "name": "Bacca Guardian", "count": 2, "hp": 90 }
-          ]
+  { "id": "lion_totem", "name": "Lion Totem", "count": 3, "hp": 45 },
+  { "id": "lion_swordsman", "name": "Lion Swordsman (Lion-Helm Duelist)", "count": 2, "hp": 90 }
+]
         },
 
         {
