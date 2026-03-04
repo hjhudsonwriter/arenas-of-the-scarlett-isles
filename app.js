@@ -323,18 +323,100 @@ function getR1RemainingSlot(){
 function getPersistentBossOverlaySrc(round){
   if(!round || !state.runActive) return "";
 
-  // Non-R1: whatever arenas.json says is the standard boss overlay.
-    if(round.id === "r4") return getR4PersistentBossOverlaySrc(round);
+  // Special: Swyth R4 (Beast Pen) uses dynamic persistent overlays based on deaths.
+  if(round.id === "r4") return getR4PersistentBossOverlaySrc(round);
 
-  // Non-R1/R4: whatever arenas.json says is the standard boss overlay.
-  if(round.id !== "r1") return round.scene?.overlay_boss || "";
+  // Special: Middlemount Round 2 (Lion Totems) primary layer = Lion Swordsmen overlays
+  if(round.id === "mm_r2") return getMMR2SwordsmenPersistentOverlaySrc(round);
 
-  // R1: if one duelist has dropped, switch to defeated overlay.
-  syncR1FirstDefeatedFromHp();
-  if(state.r1FirstDefeated === 1) return R1_OVERLAYS.defeated_1;
-  if(state.r1FirstDefeated === 2) return R1_OVERLAYS.defeated_2;
+  // Special: Swyth R1 (Arena Duelists) swaps to defeated overlay once a duelist drops.
+  if(round.id === "r1"){
+    syncR1FirstDefeatedFromHp();
+    if(state.r1FirstDefeated === 1) return R1_OVERLAYS.defeated_1;
+    if(state.r1FirstDefeated === 2) return R1_OVERLAYS.defeated_2;
+  }
 
+  // Default: whatever arenas.json says is the standard boss overlay.
   return round.scene?.overlay_boss || "";
+}
+
+function getPersistentSecondaryOverlaySrc(round){
+  if(!round || !state.runActive) return "";
+  if(round.id === "mm_r2") return getMMR2TotemsPersistentOverlaySrc(round);
+  return round.scene?.secondary_overlay_boss || "";
+}
+
+// ===== Middlemount Round 2 (Lion Totems) overlay logic =====
+const MMR2_SWORDSMAN_OVERLAYS = {
+  standard: "assets/overlays/lion_swordsman_standard.png",
+  hit: "assets/overlays/lion_swordsman_hit.png",
+  fail: "assets/overlays/lion_swordsman_fail.png",
+  dead_1: "assets/overlays/lion_swordsman_1_dead.png",
+  dead_2: "assets/overlays/lion_swordsman_2_dead.png",
+  dead_both: "assets/overlays/lion_swordsman_both_dead.png",
+};
+
+const MMR2_TOTEM_OVERLAYS = {
+  standard: "assets/overlays/lions_totems_standard.png",
+  hit: "assets/overlays/lions_totems_hit.png",
+  fail: "assets/overlays/lions_totems_fail.png",
+  down_1: "assets/overlays/lions_totems_standard_1_dead.png",
+  down_2: "assets/overlays/lions_totems_standard_2_dead.png",
+  down_3: "assets/overlays/lions_totems_standard_3_dead.png",
+};
+
+function ensureMMR2Slots(){
+  if(!state.mmR2Dead) state.mmR2Dead = { swordsman1:false, swordsman2:false };
+  if(typeof state.mmR2TotemsDown !== "number") state.mmR2TotemsDown = 0;
+}
+
+function markMMR2Dead(enemy){
+  ensureMMR2Slots();
+
+  if(enemy.defId === "lion_swordsman"){
+    if(enemy._slot === 1) state.mmR2Dead.swordsman1 = true;
+    if(enemy._slot === 2) state.mmR2Dead.swordsman2 = true;
+  }
+
+  if(enemy.defId === "lion_totem"){
+    const totems = state.enemies.filter(e => e.maxHp && e.defId === "lion_totem");
+    state.mmR2TotemsDown = totems.filter(t => (t.hp ?? 0) <= 0).length;
+  }
+}
+
+function syncMMR2DeathsFromHp(){
+  const r = getRound();
+  if(!r || r.id !== "mm_r2") return;
+
+  ensureMMR2Slots();
+
+  for(const e of state.enemies){
+    if(!e.maxHp) continue;
+    if((e.hp ?? 0) <= 0) markMMR2Dead(e);
+  }
+}
+
+function getMMR2SwordsmenPersistentOverlaySrc(round){
+  syncMMR2DeathsFromHp();
+
+  const d = state.mmR2Dead || { swordsman1:false, swordsman2:false };
+  const deadCount = (d.swordsman1 ? 1 : 0) + (d.swordsman2 ? 1 : 0);
+
+  if(deadCount === 0) return round.scene?.overlay_boss || MMR2_SWORDSMAN_OVERLAYS.standard;
+  if(deadCount === 2) return MMR2_SWORDSMAN_OVERLAYS.dead_both;
+
+  // exactly one dead
+  return d.swordsman2 ? MMR2_SWORDSMAN_OVERLAYS.dead_2 : MMR2_SWORDSMAN_OVERLAYS.dead_1;
+}
+
+function getMMR2TotemsPersistentOverlaySrc(round){
+  syncMMR2DeathsFromHp();
+
+  const down = Math.max(0, Math.min(3, state.mmR2TotemsDown || 0));
+  if(down === 0) return round.scene?.secondary_overlay_boss || MMR2_TOTEM_OVERLAYS.standard;
+  if(down === 1) return MMR2_TOTEM_OVERLAYS.down_1;
+  if(down === 2) return MMR2_TOTEM_OVERLAYS.down_2;
+  return MMR2_TOTEM_OVERLAYS.down_3;
 }
 
 function getHitOverlaySrc(round){
@@ -534,11 +616,15 @@ function setScene(){
   const r = getRound();
   if(!r) return;
 
-  $("#sceneBase").src = r.scene?.base || "";
-    const boss = $("#sceneBoss");
-    const bossSrc = getPersistentBossOverlaySrc(r) || "";
+    $("#sceneBase").src = r.scene?.base || "";
 
-  // IMPORTANT: Only show the "standard/opponents present" overlay once the run is active.
+  const boss = $("#sceneBoss");
+  const boss2 = $("#sceneBoss2");
+
+  const bossSrc = getPersistentBossOverlaySrc(r) || "";
+  const boss2Src = getPersistentSecondaryOverlaySrc(r) || "";
+
+  // IMPORTANT: Only show overlays once the run is active.
   if(state.runActive && bossSrc){
     boss.src = bossSrc;
     boss.classList.remove("hidden");
@@ -547,58 +633,86 @@ function setScene(){
     boss.removeAttribute("src");
   }
 
+  if(boss2){
+    if(state.runActive && boss2Src){
+      boss2.src = boss2Src;
+      boss2.classList.remove("hidden");
+    }else{
+      boss2.classList.add("hidden");
+      boss2.removeAttribute("src");
+    }
+  }
+
   hideOverlay();
 }
 
 let overlayTimer = null;
+
+// Each overlay layer has its own restore timer so they can run simultaneously.
 let bossRestoreTimer = null;
+let boss2RestoreTimer = null;
+
 let bossPrevSrc = "";
-function syncBossOverlayNow(){
-  const r = getRound();
-  const boss = $("#sceneBoss");
-  if(!boss || !r) return;
+let boss2PrevSrc = "";
 
-  // If a temporary overlay is active, let showOverlay restore naturally.
-  if(bossRestoreTimer) return;
-
-  const src = getPersistentBossOverlaySrc(r);
-  if(state.runActive && src){
-    boss.src = src;
-    boss.classList.remove("hidden");
-  }else{
-    boss.classList.add("hidden");
-    boss.removeAttribute("src");
-  }
-}
-function showOverlay(src, ms=5200){
-  // Replace the "boss" overlay temporarily (no stacking)
+/**
+ * Temporarily replace an overlay layer for ~ms, then restore the correct persistent overlay.
+ * layer: "primary" (sceneBoss) or "secondary" (sceneBoss2)
+ */
+function showOverlay(src, ms=5200, layer="primary"){
   if(!src) return;
 
-  const boss = $("#sceneBoss");
-  if(!boss) return;
+  const isSecondary = (layer === "secondary");
+  const el = isSecondary ? $("#sceneBoss2") : $("#sceneBoss");
+  if(!el) return;
 
-  // Remember what the boss overlay was showing
-  if(!bossPrevSrc) bossPrevSrc = boss.getAttribute("src") || "";
+  // Remember what the layer was showing
+  if(isSecondary){
+    if(!boss2PrevSrc) boss2PrevSrc = el.getAttribute("src") || "";
+  }else{
+    if(!bossPrevSrc) bossPrevSrc = el.getAttribute("src") || "";
+  }
 
-  // Force boss visible while we show the temporary overlay
-  boss.src = src;
-  boss.classList.remove("hidden");
+  // Force layer visible while we show the temporary overlay
+  el.src = src;
+  el.classList.remove("hidden");
 
   // Cancel any prior restore timer and restore after ms
-  if(bossRestoreTimer) clearTimeout(bossRestoreTimer);
-  bossRestoreTimer = setTimeout(()=>{
-    const r = getRound();
-    const standard = getPersistentBossOverlaySrc(r);
+  if(isSecondary){
+    if(boss2RestoreTimer) clearTimeout(boss2RestoreTimer);
+    boss2RestoreTimer = setTimeout(()=>{
+      const r = getRound();
+      const standard2 = getPersistentSecondaryOverlaySrc(r);
 
-    bossPrevSrc = "";
-    if(standard){
-      boss.src = standard;
-      boss.classList.remove("hidden");
-    }else{
-      boss.classList.add("hidden");
-      boss.removeAttribute("src");
-    }
-  }, ms);
+      boss2PrevSrc = "";
+      boss2RestoreTimer = null;
+
+      if(standard2){
+        el.src = standard2;
+        el.classList.remove("hidden");
+      }else{
+        el.classList.add("hidden");
+        el.removeAttribute("src");
+      }
+    }, ms);
+  }else{
+    if(bossRestoreTimer) clearTimeout(bossRestoreTimer);
+    bossRestoreTimer = setTimeout(()=>{
+      const r = getRound();
+      const standard = getPersistentBossOverlaySrc(r);
+
+      bossPrevSrc = "";
+      bossRestoreTimer = null;
+
+      if(standard){
+        el.src = standard;
+        el.classList.remove("hidden");
+      }else{
+        el.classList.add("hidden");
+        el.removeAttribute("src");
+      }
+    }, ms);
+  }
 }
 function hideOverlay(){
   // No-op now: we replace the boss overlay instead of stacking an overlay layer
@@ -917,7 +1031,13 @@ function applyFailureToPlayer(p, round){
   }
 
   // Keep FAIL overlays visible ~5s like HIT overlays.
-  showOverlay(failSrc, 5200);
+    // In Middlemount Round 2, the SKILL check represents interacting with the Totems,
+  // so show the temporary overlay on the SECONDARY (totems) layer.
+  if(round.id === "mm_r2"){
+    showOverlay(failSrc, 5200, "secondary");
+  }else{
+    showOverlay(failSrc, 5200);
+  }
   playFailSfx(round.id);
    
     if(round.id === "mm_r3" && victim.id !== p.id){
@@ -1383,8 +1503,12 @@ function openTurnDock(){
         if(round.id === "r1" && !state.r1FirstDefeated && (target._slot === 1 || target._slot === 2)){
           state.r1FirstDefeated = target._slot;
         }
-                 if(round.id === "r4"){
+                         if(round.id === "mm_r2"){
+          markMMR2Dead(target);
+        }
+        if(round.id === "r4"){
           markR4Dead(target);
+        }
         }
       }
     }
