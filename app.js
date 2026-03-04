@@ -1509,7 +1509,6 @@ function openTurnDock(){
         if(round.id === "r4"){
           markR4Dead(target);
         }
-        }
       }
     }
 
