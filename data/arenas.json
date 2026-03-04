@@ -9,13 +9,12 @@
     "id": "r1",
     "title": "Round 1 — Arena Duelists",
     "scene": {
-  "base": "assets/maps/swyth_beast_pen_round_4.png",
-  "overlay_boss": "assets/overlays/beast_pen_standard.png",
+  "base": "assets/maps/swyth_base_rounds_1_2.png",
+  "overlay_boss": "assets/overlays/arena_duelists_standard.png",
   "overlays": {
-    "pc_hit": "assets/overlays/beast_pen_hit_standard.png",
+    "pc_hit": "assets/overlays/arena_duelists_hit.png",
     "pc_fail_variants": [
-      "assets/overlays/beast_pen_boar_fail_standard.png",
-      "assets/overlays/beast_pen_hyena_fail_standard.png"
+      "assets/overlays/arena_duelists_fail.png"
     ]
   }
 },
