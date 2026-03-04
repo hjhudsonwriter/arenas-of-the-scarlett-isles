@@ -147,6 +147,153 @@
     ]
   }
 ]
+    },
+    {
+      "id": "middlemount_lions_crown",
+      "name": "Middlemount: The Lion’s Crown",
+      "description": "A prestigious mountain arena beneath Clan Bacca banners. Three rounds: opening duels, the Lion Totems trial, then the Lion’s Mark champion.",
+      "rounds": [
+        {
+          "id": "mm_r1",
+          "title": "Round 1 — Arena Duelists (Opening Bout)",
+          "scene": {
+            "base": "assets/maps/middlemount_lions_crown.png",
+            "overlay_boss": "assets/overlays/arena_duelists_standard.png",
+            "overlays": {
+              "pc_hit": "assets/overlays/arena_duelists_hit.png",
+              "pc_fail_variants": [
+                "assets/overlays/arena_duelists_fail.png"
+              ]
+            }
+          },
+          "reward_gp": 1000,
+          "skill_challenge": {
+            "target_successes": 6,
+            "max_failures": 3,
+            "damage_on_failure": "2d6",
+            "dcs": { "easy": 13, "standard": 15, "hard": 17 },
+            "turn_limit": 6,
+            "overtime": {
+              "failure_each_turn": 0,
+              "party_damage_each_turn": "1d6"
+            },
+            "notes": [
+              "Individual turns. One player acts per turn.",
+              "On your turn: make a Skill check for a success/failure, then make an Attack roll to deal damage if you hit.",
+              "Win: reach 6 successes. Lose: reach 3 failures."
+            ],
+            "actions": [
+              { "id": "athletics", "label": "Drive them back (Athletics)" },
+              { "id": "acrobatics", "label": "Footwork & feints (Acrobatics)" },
+              { "id": "intimidation", "label": "Break morale (Intimidation)" },
+              { "id": "perception", "label": "Read the tells (Perception)" },
+              { "id": "deception", "label": "Bait an opening (Deception)" },
+              { "id": "performance", "label": "Win the crowd (Performance)" }
+            ]
+          },
+          "attack": {
+            "hit_dc": 14,
+            "default_damage": "2d8"
+          },
+          "enemies": [
+            { "id": "duelist", "name": "Arena Duelist", "count": 2, "hp": 45 }
+          ]
+        },
+
+        {
+          "id": "mm_r2",
+          "title": "Round 2 — The Lion Totems",
+          "scene": {
+            "base": "assets/maps/middlemount_lions_crown.png",
+            "overlay_boss": "assets/overlays/lions_totems_standard.png",
+            "overlays": {
+              "pc_hit": "assets/overlays/lions_totems_hit.png",
+              "pc_fail_variants": [
+                "assets/overlays/lions_totems_fail.png"
+              ]
+            }
+          },
+          "reward_gp": 8000,
+          "skill_challenge": {
+            "target_successes": 8,
+            "max_failures": 3,
+            "damage_on_failure": "5d6",
+            "dcs": { "easy": 15, "standard": 17, "hard": 19 },
+            "turn_limit": 7,
+            "overtime": {
+              "failure_each_turn": 1,
+              "party_damage_each_turn": "1d10"
+            },
+            "notes": [
+              "Objective: shatter the three Lion Totems.",
+              "Until the totems are broken, the arena’s magic empowers the guardians.",
+              "Win: destroy all three totems (the round ends when the last totem falls)."
+            ],
+            "actions": [
+              { "id": "arcana", "label": "Disrupt the runes (Arcana)" },
+              { "id": "religion", "label": "Unmake the warding rite (Religion)" },
+              { "id": "athletics", "label": "Wrench stonework loose (Athletics)" },
+              { "id": "perception", "label": "Spot the weak seam (Perception)" },
+              { "id": "intimidation", "label": "Rattle the guardians (Intimidation)" }
+            ]
+          },
+          "attack": {
+            "hit_dc": 15,
+            "default_damage": "2d10"
+          },
+          "enemies": [
+            { "id": "lion_totem", "name": "Lion Totem", "count": 3, "hp": 45 },
+            { "id": "bacca_guardian", "name": "Bacca Guardian", "count": 2, "hp": 90 }
+          ]
+        },
+
+        {
+          "id": "mm_r3",
+          "title": "Round 3 — The Lion’s Mark",
+          "scene": {
+            "base": "assets/maps/middlemount_lions_crown.png",
+            "overlay_boss": "assets/overlays/lions_mark_standard.png",
+            "overlays": {
+              "pc_hit": "assets/overlays/lions_mark_hit.png",
+              "pc_fail_variants": [
+                "assets/overlays/lions_mark_fail.png"
+              ]
+            }
+          },
+          "reward_gp": 25000,
+          "skill_challenge": {
+            "target_successes": 10,
+            "max_failures": 3,
+            "damage_on_failure": "6d6",
+            "dcs": { "easy": 16, "standard": 18, "hard": 20 },
+            "turn_limit": 7,
+            "overtime": {
+              "failure_each_turn": 1,
+              "party_damage_each_turn": "2d8"
+            },
+            "notes": [
+              "A brutal champion rides a dire lion.",
+              "Each turn, a player is chosen as the Lion’s Mark.",
+              "On a failed Skill check, the champion strikes the marked player (not the active player).",
+              "Win: drive the champion back (10 successes) or defeat them by damage."
+            ],
+            "actions": [
+              { "id": "athletics", "label": "Hold ground and brace (Athletics)" },
+              { "id": "acrobatics", "label": "Slip the lion’s pounce (Acrobatics)" },
+              { "id": "intimidation", "label": "Draw the rider’s ire (Intimidation)" },
+              { "id": "perception", "label": "Read the charge line (Perception)" },
+              { "id": "arcana", "label": "Disrupt the mark glyph (Arcana)" }
+            ]
+          },
+          "attack": {
+            "hit_dc": 16,
+            "default_damage": "3d10"
+          },
+          "enemies": [
+            { "id": "lion_knight", "name": "Bacca Lion Knight (Dire Lion Rider)", "count": 1, "hp": 220 }
+          ]
+        }
+      ]
     }
   ]
 }
