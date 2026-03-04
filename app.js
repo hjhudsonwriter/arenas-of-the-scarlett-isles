@@ -1495,16 +1495,42 @@ async function init(){
   $("#addPlayerBtn").addEventListener("click", openAddPlayer);
 
   $("#backToStartBtn").addEventListener("click", ()=>{
-    if(!confirm("Back to Start? (Resets run counters and returns to first round)")) return;
-    const a = getArena();
-    if(!a) return;
-    state.roundId = a.rounds[0]?.id || state.roundId;
-    save();
-    resetRunState("Back to start. Enter The Arena to begin.");
-    renderSelects();
-    setScene();
-    renderHeaderStats();
-  });
+  if(!confirm("Back to Start? This will restore party HP, clear all gold earned, and reset round progress (players remain).")) return;
+
+  const a = getArena();
+  if(!a) return;
+
+  // Return to Round 1 selection
+  state.roundId = a.rounds[0]?.id || state.roundId;
+
+  // Restore party HP (keep the players themselves)
+  for(const p of state.players){
+    p.hp = p.maxHp;
+    delete p._beastBonusUsed;
+  }
+
+  // Clear earned gold
+  state.totalGold = 0;
+
+  // Cancel any pending overlay restore so nothing pops back after the wipe
+  if(bossRestoreTimer){
+    clearTimeout(bossRestoreTimer);
+    bossRestoreTimer = null;
+  }
+  bossPrevSrc = "";
+
+  // Reset run state (no active run, no enemies, counters zero)
+  resetRunState("Fresh start. Enter The Arena to begin.");
+
+  // Persist the wiped gold + restored HP + round selection
+  save();
+
+  // Refresh UI
+  renderSelects();
+  setScene();
+  renderPartyList();
+  renderHeaderStats();
+});
 
   $("#resetRunBtn").addEventListener("click", ()=>{
     if(!confirm("Reset current run (success/fail/turn/opponents)?")) return;
