@@ -128,6 +128,7 @@ select:focus,input:focus{
   object-fit: cover;
   object-position: center 35%;
   pointer-events:none;
+  z-index: 2; /* swordsmen on top */
 }
 
 .sceneBoss2{
@@ -138,6 +139,7 @@ select:focus,input:focus{
   object-fit: cover;
   object-position: center 35%;
   pointer-events:none;
+  z-index: 1; /* totems behind */
 }
 
 .sceneOverlay{
