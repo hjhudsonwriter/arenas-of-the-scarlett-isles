@@ -26,6 +26,11 @@ const SFX = {
 
   r5_hit: "assets/sfx/wyvern_hit.mp3",
   r5_fail:"assets/sfx/wyvern_fail.mp3",
+    // Middlemount: Lion's Crown
+  mm_r2_hit: "assets/sfx/lions_totems_hit.mp3",
+  mm_r2_fail:"assets/sfx/lions_totems_fail.mp3",
+  mm_r3_hit: "assets/sfx/lions_mark_hit.mp3",
+  mm_r3_fail:"assets/sfx/lions_mark_fail.mp3", 
 };
 
 let crowdLoopAudio = null;
@@ -66,6 +71,8 @@ function playHitSfx(roundId){
   if(roundId === "r1") playOneShot(SFX.r1_hit, 0.9);
   if(roundId === "r4") playOneShot(SFX.r4_hit, 0.9);
   if(roundId === "r5") playOneShot(SFX.r5_hit, 0.9);
+    if(roundId === "mm_r2") playOneShot(SFX.mm_r2_hit, 0.9);
+  if(roundId === "mm_r3") playOneShot(SFX.mm_r3_hit, 0.9); 
   playOneShot(SFX.crowd_hit, 0.75);
 }
 
@@ -74,6 +81,8 @@ function playFailSfx(roundId){
   if(roundId === "r1") playOneShot(SFX.r1_fail, 0.9);
   if(roundId === "r4") playOneShot(SFX.r4_fail, 0.9);
   if(roundId === "r5") playOneShot(SFX.r5_fail, 0.9);
+    if(roundId === "mm_r2") playOneShot(SFX.mm_r2_fail, 0.9);
+  if(roundId === "mm_r3") playOneShot(SFX.mm_r3_fail, 0.9); 
   playOneShot(SFX.crowd_fail, 0.75);
 }
 
@@ -100,6 +109,12 @@ const state = {
      // Round 2 / Beast-Pen (round id "r4") defeated-state tracking:
   // boar = Razor-Boar, hyena1/hyena2 = Hooked Hyenas (slots 1 and 2)
   r4Dead: { boar:false, hyena1:false, hyena2:false },
+     // Middlemount Round 2: Lion Totems tracking
+  mmR2TotemsDown: 0, // 0-3
+
+  // Middlemount Round 3: Lion's Mark tracking
+  mmR3MarkPlayerId: null,
+  mmR3LastMarkedId: null,
 };
 
 function uid(prefix="id"){
@@ -793,7 +808,10 @@ function resetRunState(msg="Run reset."){
   state.failures = 0;
   state.enemies = [];
   state.r1FirstDefeated = null; 
-    state.r4Dead = { boar:false, hyena1:false, hyena2:false }; 
+    state.r4Dead = { boar:false, hyena1:false, hyena2:false };
+    state.mmR2TotemsDown = 0;
+  state.mmR3MarkPlayerId = null;
+  state.mmR3LastMarkedId = null; 
   renderEnemyList();
   renderHeaderStats();
   setStatus(msg);
@@ -813,7 +831,10 @@ function startRound(roundId){
   state.failures = 0;
   state.turnIndex = 0; 
   state.r1FirstDefeated = null; 
-    state.r4Dead = { boar:false, hyena1:false, hyena2:false }; 
+    state.r4Dead = { boar:false, hyena1:false, hyena2:false };
+    state.mmR2TotemsDown = 0;
+  state.mmR3MarkPlayerId = null;
+  state.mmR3LastMarkedId = null; 
    
 
   // per-round flags
@@ -831,6 +852,24 @@ function startRound(roundId){
 
   openRulesDock(true);
 }
+function ensureLionsMark(){
+  const r = getRound();
+  if(!r || r.id !== "mm_r3") return;
+
+  const alive = state.players.filter(p => p.hp > 0);
+  if(alive.length === 0){
+    state.mmR3MarkPlayerId = null;
+    return;
+  }
+
+  // Prefer a new mark each turn if possible
+  let pool = alive.filter(p => p.id !== state.mmR3LastMarkedId);
+  if(pool.length === 0) pool = alive;
+
+  const pick = pool[Math.floor(Math.random() * pool.length)];
+  state.mmR3MarkPlayerId = pick.id;
+  state.mmR3LastMarkedId = pick.id;
+}
 
 function partyAlive(){
   return state.players.some(p => (p.hp||0) > 0);
@@ -843,8 +882,16 @@ function applyFailureToPlayer(p, round){
   const sc = round.skill_challenge;
   state.failures += 1;
 
-  const dmg = rollDice(sc.damage_on_failure);
-  p.hp = clamp(p.hp - dmg.total, 0, p.maxHp);
+    const dmg = rollDice(sc.damage_on_failure);
+
+  // Middlemount Round 3: failures hit the marked player, not the active player
+  let victim = p;
+  if(round.id === "mm_r3"){
+    const marked = state.players.find(x => x.id === state.mmR3MarkPlayerId && x.hp > 0);
+    if(marked) victim = marked;
+  }
+
+  victim.hp = clamp(victim.hp - dmg.total, 0, victim.maxHp);
 
         const ov = round.scene?.overlays || {};
 
@@ -873,7 +920,11 @@ function applyFailureToPlayer(p, round){
   showOverlay(failSrc, 5200);
   playFailSfx(round.id);
    
-  log(`${p.name} failed: -${dmg.total} HP (${dmg.expr}: ${dmg.rolls.join(", ")}).`);
+    if(round.id === "mm_r3" && victim.id !== p.id){
+    log(`${p.name} failed: the Lion Knight strikes ${victim.name} for -${dmg.total} HP (${dmg.expr}: ${dmg.rolls.join(", ")}).`);
+  }else{
+    log(`${p.name} failed: -${dmg.total} HP (${dmg.expr}: ${dmg.rolls.join(", ")}).`);
+  }
 }
 
 function applyOvertimePressure(round){
@@ -1075,6 +1126,8 @@ function openTurnDock(){
 
   // advance turn
   state.turn += 1;
+    // Middlemount Round 3: assign the Lion's Mark each turn
+  if(round.id === "mm_r3") ensureLionsMark(); 
 
   const sc = round.skill_challenge;
   const atk = round.attack || {hit_dc: 14, default_damage:"2d8"};
@@ -1100,11 +1153,27 @@ function openTurnDock(){
        </div><div style="height:10px"></div>`
     : "";
 
-  showDock({
+    let markBanner = "";
+  if(round.id === "mm_r3"){
+    const mp = state.players.find(x => x.id === state.mmR3MarkPlayerId);
+    if(mp){
+      markBanner = `
+        <div class="card" style="border-color:rgba(217,179,95,.55);background:rgba(217,179,95,.08)">
+          <strong>Lion’s Mark</strong>
+          <div class="muted" style="font-size:12px;margin-top:6px;">
+            The champion is hunting: <span class="kbd">${escapeHtml(mp.name)}</span>
+          </div>
+        </div>
+        <div style="height:10px"></div>
+      `;
+    }
+  }
+   showDock({
     title: `${round.title}`,
     sub: `Turn ${state.turn} | Success ${state.successes}/${sc.target_successes} | Fail ${state.failures}/${sc.max_failures}`,
-    body: `
+        body: `
       ${tempoWarn}
+      ${markBanner}
       <div class="card">
         <div class="grid2">
   <div class="field">
@@ -1290,6 +1359,25 @@ function openTurnDock(){
       target.hp = clamp(target.hp - dmg, 0, target.maxHp);
       if(target.hp === 0){
         log(`${target.name} is defeated.`);
+                 // Middlemount Round 2: Lion Totems puzzle
+        // When the last totem falls, the round is effectively cleared.
+        if(round.id === "mm_r2" && (target.defId === "lion_totem" || /totem/i.test(target.name || ""))){
+          // Count how many totems are down right now
+          const totems = state.enemies.filter(e => e.maxHp && (e.defId === "lion_totem" || /totem/i.test(e.name || "")));
+          const down = totems.filter(t => (t.hp ?? 0) <= 0).length;
+          state.mmR2TotemsDown = down;
+
+          if(down >= 3){
+            log("All three Lion Totems are shattered. The guardians falter and withdraw.");
+            // Remove / defeat all remaining enemies so victory-by-KO triggers cleanly
+            for(const e of state.enemies){
+              if(e.maxHp && e.hp > 0) e.hp = 0;
+            }
+            // Immediately refresh persistent overlay
+            syncBossOverlayNow();
+            renderEnemyList();
+          }
+        }
 
         // Round 1: the first duelist to hit 0 becomes the defeated-state that persists.
         if(round.id === "r1" && !state.r1FirstDefeated && (target._slot === 1 || target._slot === 2)){
