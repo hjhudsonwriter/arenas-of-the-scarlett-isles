@@ -1480,20 +1480,26 @@ function openTurnDock(){
       : `❌ Attack: <span class="kbd">${d20}</span> + ${mod} = <strong>${total}</strong> vs DC ${dc}. (Miss)`;
          // On a MISS, flash the correct FAIL overlay for the currently selected target (mm_r2 supports totem-vs-swordsman layers)
     if(!hit){
-      const tid = $("#t_target").value;
-      const target = state.enemies.find(e=>e.id===tid);
+  const tid = $("#t_target").value;
+  const target = state.enemies.find(e=>e.id===tid);
 
-      if(round.id === "mm_r2"){
-        const failSrc = getMMR2TempOverlay("fail", target);
-        const failLayer = isMMR2TotemTarget(target) ? "secondary" : "primary";
-        showOverlay(failSrc, 5200, failLayer);
-      }else{
-        const failSrc = getFailOverlaySrc(round);
-        showOverlay(failSrc, 5200, "primary");
-      }
-
+  if(round.id === "mm_r2"){
+    // IMPORTANT:
+    // Totem FAIL overlay means "totem retaliates / deals magical damage".
+    // A missed attack roll does NOT deal damage to the party, so do NOT show totem fail on an attack miss.
+    if(!isMMR2TotemTarget(target)){
+      // Missed attack against a swordsman: show swordsman fail (reads as "they outplay you").
+      const failSrc = MMR2_SWORDSMAN_OVERLAYS.fail;
+      showOverlay(failSrc, 5200, "primary");
       playFailSfx(round.id);
     }
+    // If targeting a totem and you miss: no overlay, no fail SFX (just the miss text).
+  }else{
+    const failSrc = getFailOverlaySrc(round);
+    showOverlay(failSrc, 5200, "primary");
+    playFailSfx(round.id);
+  }
+}
   });
 
   $("#t_applyDmg").addEventListener("click", ()=>{
