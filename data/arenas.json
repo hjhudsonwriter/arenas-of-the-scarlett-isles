@@ -207,12 +207,15 @@
   "base": "assets/maps/middlemount_lions_crown.png",
 
   "overlay_boss": "assets/overlays/lion_swordsman_standard.png",
+  "secondary_overlay_boss": "assets/overlays/lions_totems_standard.png",
+
   "overlays": {
     "pc_hit": "assets/overlays/lion_swordsman_hit.png",
     "pc_fail_variants": [
       "assets/overlays/lion_swordsman_fail.png"
     ]
-  },
+  }
+},
 
   "secondary_overlay_boss": "assets/overlays/lions_totems_standard.png",
   "secondary_overlays": {
