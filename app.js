@@ -621,6 +621,37 @@ function getR4FailOverlaySrc(round){
   if(Array.isArray(ov.pc_fail_variants) && ov.pc_fail_variants.length) return ov.pc_fail_variants[0];
   return ov.pc_fail;
 }
+
+function syncBossOverlayNow(){
+  const r = getRound();
+
+  const boss = $("#sceneBoss");
+  const boss2 = $("#sceneBoss2");
+
+  const bossSrc = getPersistentBossOverlaySrc(r) || "";
+  const boss2Src = getPersistentSecondaryOverlaySrc(r) || "";
+
+  if(boss){
+    if(state.runActive && bossSrc){
+      boss.src = bossSrc;
+      boss.classList.remove("hidden");
+    }else{
+      boss.classList.add("hidden");
+      boss.removeAttribute("src");
+    }
+  }
+
+  if(boss2){
+    if(state.runActive && boss2Src){
+      boss2.src = boss2Src;
+      boss2.classList.remove("hidden");
+    }else{
+      boss2.classList.add("hidden");
+      boss2.removeAttribute("src");
+    }
+  }
+}
+
 function setScene(){
   const r = getRound();
   if(!r) return;
@@ -1042,8 +1073,14 @@ function applyFailureToPlayer(p, round){
   // Keep FAIL overlays visible ~5s like HIT overlays.
 // In Middlemount Round 2, a SKILL check failure represents the swordsmen punishing the party,
 // so the FAIL overlay must be on the PRIMARY (swordsmen) layer.
+// Keep FAIL overlays visible ~5s like HIT overlays.
 if(round.id === "mm_r2"){
-  showOverlay(failSrc, 5200, "primary");
+  // Skill failure in Lion Totems round = the TOTEMS retaliate.
+  const totemFail =
+    (round.scene?.secondary_overlays?.pc_fail_variants?.[0])
+    || "assets/overlays/lions_totems_fail.png";
+
+  showOverlay(totemFail, 5200, "secondary");
 }else{
   showOverlay(failSrc, 5200, "primary");
 }
