@@ -682,7 +682,7 @@ function setScene(){
       boss2.removeAttribute("src");
     }
   }
-
+  renderLionsMarkHud();
   hideOverlay();
 }
 
@@ -1006,6 +1006,29 @@ function startRound(roundId){
 
   openRulesDock(true);
 }
+
+function renderLionsMarkHud(){
+  const hud = document.getElementById("lionsMarkHud");
+  if(!hud) return;
+
+  const r = getRound();
+  if(!state.runActive || !r || r.id !== "mm_r3"){
+    hud.classList.add("hidden");
+    return;
+  }
+
+  const mp = state.players.find(p => p.id === state.mmR3MarkPlayerId && p.hp > 0);
+  if(!mp){
+    hud.classList.add("hidden");
+    return;
+  }
+
+  const nameEl = document.getElementById("lionsMarkHudName");
+  if(nameEl) nameEl.textContent = mp.name;
+
+  hud.classList.remove("hidden");
+}
+
 function ensureLionsMark(){
   const r = getRound();
   if(!r || r.id !== "mm_r3") return;
@@ -1021,8 +1044,10 @@ function ensureLionsMark(){
   if(pool.length === 0) pool = alive;
 
   const pick = pool[Math.floor(Math.random() * pool.length)];
-  state.mmR3MarkPlayerId = pick.id;
+    state.mmR3MarkPlayerId = pick.id;
   state.mmR3LastMarkedId = pick.id;
+
+  renderLionsMarkHud();
 }
 
 function partyAlive(){
@@ -1292,16 +1317,27 @@ function openTurnDock(){
 
   // advance turn
   state.turn += 1;
-    // Middlemount Round 3: assign the Lion's Mark each turn
-  if(round.id === "mm_r3") ensureLionsMark(); 
-
+  
   const sc = round.skill_challenge;
   const atk = round.attack || {hit_dc: 14, default_damage:"2d8"};
 
-    const alivePlayers = state.players.filter(p=>p.hp>0);
+      const alivePlayers = state.players.filter(p=>p.hp>0);
   if(alivePlayers.length === 0){
     endRound(false);
     return;
+  }
+
+  // Middlemount Round 3: Lion’s Mark changes once per full rotation (once everyone has acted)
+  if(round.id === "mm_r3"){
+    const markedAlive = alivePlayers.some(x => x.id === state.mmR3MarkPlayerId);
+    const isNewRotation = (state.turnIndex % alivePlayers.length === 0);
+
+    // Pick a mark at the start of the rotation, or if the current mark is dead/missing
+    if(isNewRotation || !markedAlive){
+      ensureLionsMark();
+    }else{
+      renderLionsMarkHud();
+    }
   }
 
   // Auto-pick next alive player (round-robin)
@@ -1319,27 +1355,11 @@ function openTurnDock(){
        </div><div style="height:10px"></div>`
     : "";
 
-    let markBanner = "";
-  if(round.id === "mm_r3"){
-    const mp = state.players.find(x => x.id === state.mmR3MarkPlayerId);
-    if(mp){
-      markBanner = `
-        <div class="card" style="border-color:rgba(217,179,95,.55);background:rgba(217,179,95,.08)">
-          <strong>Lion’s Mark</strong>
-          <div class="muted" style="font-size:12px;margin-top:6px;">
-            The champion is hunting: <span class="kbd">${escapeHtml(mp.name)}</span>
-          </div>
-        </div>
-        <div style="height:10px"></div>
-      `;
-    }
-  }
    showDock({
     title: `${round.title}`,
     sub: `Turn ${state.turn} | Success ${state.successes}/${sc.target_successes} | Fail ${state.failures}/${sc.max_failures}`,
         body: `
       ${tempoWarn}
-      ${markBanner}
       <div class="card">
         <div class="grid2">
   <div class="field">
