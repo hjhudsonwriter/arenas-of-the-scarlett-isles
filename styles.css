@@ -151,7 +151,7 @@ select:focus,input:focus{
   object-fit: cover;
   object-position: center 35%;
   pointer-events:none;
-  z-index: 1; /* totems behind */
+  z-index: 2; /* secondary overlay (totems) behind swordsmen */
 }
 
 .sceneOverlay{
