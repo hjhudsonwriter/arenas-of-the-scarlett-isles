@@ -29,8 +29,17 @@ const SFX = {
     // Middlemount: Lion's Crown
   mm_r2_hit: "assets/sfx/lions_totems_hit.mp3",
   mm_r2_fail:"assets/sfx/lions_totems_fail.mp3",
-  mm_r3_hit: "assets/sfx/lions_mark_hit.mp3",
-  mm_r3_fail:"assets/sfx/lions_mark_fail.mp3", 
+    // Middlemount: Lion's Mark (play all 3 simultaneously)
+  mm_r3_hit_stack: [
+    "assets/sfx/lions_mark_hit_1.mp3",
+    "assets/sfx/lions_mark_hit_2.mp3",
+    "assets/sfx/lions_mark_hit_3.mp3",
+  ],
+  mm_r3_fail_stack: [
+    "assets/sfx/lions_mark_fail_1.mp3",
+    "assets/sfx/lions_mark_fail_2.mp3",
+    "assets/sfx/lions_mark_fail_3.mp3",
+  ], 
 };
 
 let crowdLoopAudio = null;
@@ -66,23 +75,55 @@ function playOneShot(src, volume=0.7){
   a.play().catch(()=>{});
 }
 
-function playHitSfx(roundId){
-  // round-specific first (as requested), then crowd hit
+function playHitSfx(roundId, target=null){
+  // Middlemount Round 2: Totems use totem SFX, swordsmen use Round 1 duelists SFX
+  if(roundId === "mm_r2"){
+    if(isMMR2TotemTarget(target)) playOneShot(SFX.mm_r2_hit, 0.9);
+    else playOneShot(SFX.r1_hit, 0.9);
+    playOneShot(SFX.crowd_hit, 0.75);
+    return;
+  }
+
+  // Middlemount Round 3: play all 3 Lion’s Mark HIT files simultaneously
+  if(roundId === "mm_r3"){
+    for(const src of (SFX.mm_r3_hit_stack || [])){
+      playOneShot(src, 0.9);
+    }
+    playOneShot(SFX.crowd_hit, 0.75);
+    return;
+  }
+
+  // Existing rounds
   if(roundId === "r1") playOneShot(SFX.r1_hit, 0.9);
   if(roundId === "r4") playOneShot(SFX.r4_hit, 0.9);
   if(roundId === "r5") playOneShot(SFX.r5_hit, 0.9);
-    if(roundId === "mm_r2") playOneShot(SFX.mm_r2_hit, 0.9);
-  if(roundId === "mm_r3") playOneShot(SFX.mm_r3_hit, 0.9); 
+
   playOneShot(SFX.crowd_hit, 0.75);
 }
 
-function playFailSfx(roundId){
-  // round-specific first, then crowd fail
+function playFailSfx(roundId, target=null){
+  // Middlemount Round 2: Totems use totem SFX, swordsmen use Round 1 duelists SFX
+  if(roundId === "mm_r2"){
+    if(isMMR2TotemTarget(target)) playOneShot(SFX.mm_r2_fail, 0.9);
+    else playOneShot(SFX.r1_fail, 0.9);
+    playOneShot(SFX.crowd_fail, 0.75);
+    return;
+  }
+
+  // Middlemount Round 3: play all 3 Lion’s Mark FAIL files simultaneously
+  if(roundId === "mm_r3"){
+    for(const src of (SFX.mm_r3_fail_stack || [])){
+      playOneShot(src, 0.9);
+    }
+    playOneShot(SFX.crowd_fail, 0.75);
+    return;
+  }
+
+  // Existing rounds
   if(roundId === "r1") playOneShot(SFX.r1_fail, 0.9);
   if(roundId === "r4") playOneShot(SFX.r4_fail, 0.9);
   if(roundId === "r5") playOneShot(SFX.r5_fail, 0.9);
-    if(roundId === "mm_r2") playOneShot(SFX.mm_r2_fail, 0.9);
-  if(roundId === "mm_r3") playOneShot(SFX.mm_r3_fail, 0.9); 
+
   playOneShot(SFX.crowd_fail, 0.75);
 }
 
@@ -1109,7 +1150,12 @@ if(round.id === "mm_r2"){
 }else{
   showOverlay(failSrc, 5200, "primary");
 }
-playFailSfx(round.id);
+if(round.id === "mm_r2"){
+  // Skill failure in Lion Totems round = TOTEMS retaliate
+  playFailSfx(round.id, { defId: "lion_totem" });
+}else{
+  playFailSfx(round.id);
+}
    
     if(round.id === "mm_r3" && victim.id !== p.id){
     log(`${p.name} failed: the Lion Knight strikes ${victim.name} for -${dmg.total} HP (${dmg.expr}: ${dmg.rolls.join(", ")}).`);
@@ -1517,7 +1563,7 @@ function openTurnDock(){
   }else{
     const failSrc = getFailOverlaySrc(round);
     showOverlay(failSrc, 5200, "primary");
-    playFailSfx(round.id);
+    playFailSfx(round.id, target);
   }
 }
   });
@@ -1607,7 +1653,7 @@ function openTurnDock(){
     }
 
     showOverlay(hitOverlaySrc, 5200, hitOverlayLayer);
-    playHitSfx(round.id);
+    playHitSfx(round.id, target);
 
     log(`Attack damage to ${target.name}: -${dmg} HP.`);
     renderEnemyList();
