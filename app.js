@@ -285,7 +285,7 @@ const R1_OVERLAYS = {
 
 function ensureR1Slots(){
   const r = getRound();
-  if(!r || r.id !== "r1") return;
+    if(!r || (r.id !== "r1" && r.id !== "mm_r1")) return;
 
   // If _slot already exists for 1 and 2, keep it.
   const hpEnemies = state.enemies.filter(e => e.maxHp != null);
@@ -300,7 +300,7 @@ function ensureR1Slots(){
 
 function syncR1FirstDefeatedFromHp(){
   const r = getRound();
-  if(!r || r.id !== "r1") return;
+    if(!r || (r.id !== "r1" && r.id !== "mm_r1")) return;
   if(state.r1FirstDefeated) return;
 
   ensureR1Slots();
@@ -329,8 +329,8 @@ function getPersistentBossOverlaySrc(round){
   // Special: Middlemount Round 2 (Lion Totems) primary layer = Lion Swordsmen overlays
   if(round.id === "mm_r2") return getMMR2SwordsmenPersistentOverlaySrc(round);
 
-  // Special: Swyth R1 (Arena Duelists) swaps to defeated overlay once a duelist drops.
-  if(round.id === "r1"){
+    // Special: Arena Duelists (Swyth r1 + Middlemount mm_r1) swaps to defeated overlay once a duelist drops.
+  if(round.id === "r1" || round.id === "mm_r1"){
     syncR1FirstDefeatedFromHp();
     if(state.r1FirstDefeated === 1) return R1_OVERLAYS.defeated_1;
     if(state.r1FirstDefeated === 2) return R1_OVERLAYS.defeated_2;
@@ -364,6 +364,15 @@ const MMR2_TOTEM_OVERLAYS = {
   down_2: "assets/overlays/lions_totems_standard_2_dead.png",
   down_3: "assets/overlays/lions_totems_standard_3_dead.png",
 };
+function isMMR2TotemTarget(target){
+  return !!target && target.defId === "lion_totem";
+}
+
+function getMMR2TempOverlay(kind, target){
+  // kind: "hit" | "fail"
+  if(isMMR2TotemTarget(target)) return (kind === "hit") ? MMR2_TOTEM_OVERLAYS.hit : MMR2_TOTEM_OVERLAYS.fail;
+  return (kind === "hit") ? MMR2_SWORDSMAN_OVERLAYS.hit : MMR2_SWORDSMAN_OVERLAYS.fail;
+}
 
 function ensureMMR2Slots(){
   if(!state.mmR2Dead) state.mmR2Dead = { swordsman1:false, swordsman2:false };
@@ -423,7 +432,7 @@ function getHitOverlaySrc(round){
   const ov = round.scene?.overlays || {};
 
     if(round.id === "r4") return getR4HitOverlaySrc(round);
-  if(round.id !== "r1") return ov.pc_hit;
+    if(round.id !== "r1" && round.id !== "mm_r1") return ov.pc_hit;
 
   syncR1FirstDefeatedFromHp();
   const remain = getR1RemainingSlot();
@@ -440,7 +449,7 @@ function getFailOverlaySrc(round){
   const ov = round.scene?.overlays || {};
 
     if(round.id === "r4") return getR4FailOverlaySrc(round);
-  if(round.id !== "r1") return ov.pc_fail;
+    if(round.id !== "r1" && round.id !== "mm_r1") return ov.pc_fail;
 
   syncR1FirstDefeatedFromHp();
   const remain = getR1RemainingSlot();
@@ -1031,14 +1040,14 @@ function applyFailureToPlayer(p, round){
   }
 
   // Keep FAIL overlays visible ~5s like HIT overlays.
-    // In Middlemount Round 2, the SKILL check represents interacting with the Totems,
-  // so show the temporary overlay on the SECONDARY (totems) layer.
-  if(round.id === "mm_r2"){
-    showOverlay(failSrc, 5200, "secondary");
-  }else{
-    showOverlay(failSrc, 5200);
-  }
-  playFailSfx(round.id);
+// In Middlemount Round 2, a SKILL check failure represents the swordsmen punishing the party,
+// so the FAIL overlay must be on the PRIMARY (swordsmen) layer.
+if(round.id === "mm_r2"){
+  showOverlay(failSrc, 5200, "primary");
+}else{
+  showOverlay(failSrc, 5200, "primary");
+}
+playFailSfx(round.id);
    
     if(round.id === "mm_r3" && victim.id !== p.id){
     log(`${p.name} failed: the Lion Knight strikes ${victim.name} for -${dmg.total} HP (${dmg.expr}: ${dmg.rolls.join(", ")}).`);
@@ -1432,6 +1441,22 @@ function openTurnDock(){
     $("#t_atkOut").innerHTML = hit
       ? `✅ Attack: <span class="kbd">${d20}</span> + ${mod} = <strong>${total}</strong> vs DC ${dc}. (Hit)`
       : `❌ Attack: <span class="kbd">${d20}</span> + ${mod} = <strong>${total}</strong> vs DC ${dc}. (Miss)`;
+         // On a MISS, flash the correct FAIL overlay for the currently selected target (mm_r2 supports totem-vs-swordsman layers)
+    if(!hit){
+      const tid = $("#t_target").value;
+      const target = state.enemies.find(e=>e.id===tid);
+
+      if(round.id === "mm_r2"){
+        const failSrc = getMMR2TempOverlay("fail", target);
+        const failLayer = isMMR2TotemTarget(target) ? "secondary" : "primary";
+        showOverlay(failSrc, 5200, failLayer);
+      }else{
+        const failSrc = getFailOverlaySrc(round);
+        showOverlay(failSrc, 5200, "primary");
+      }
+
+      playFailSfx(round.id);
+    }
   });
 
   $("#t_applyDmg").addEventListener("click", ()=>{
@@ -1473,7 +1498,13 @@ function openTurnDock(){
     mem.lastDamage = dmg;
 
     // Decide which HIT overlay to show BEFORE we possibly mark the first defeated duelist.
-    const hitOverlaySrc = getHitOverlaySrc(round);
+        let hitOverlaySrc = getHitOverlaySrc(round);
+    let hitOverlayLayer = "primary";
+
+    if(round.id === "mm_r2"){
+      hitOverlaySrc = getMMR2TempOverlay("hit", target);
+      hitOverlayLayer = isMMR2TotemTarget(target) ? "secondary" : "primary";
+    }
 
     if(target.maxHp){
       target.hp = clamp(target.hp - dmg, 0, target.maxHp);
@@ -1512,7 +1543,7 @@ function openTurnDock(){
       }
     }
 
-    showOverlay(hitOverlaySrc, 5200);
+    showOverlay(hitOverlaySrc, 5200, hitOverlayLayer);
     playHitSfx(round.id);
 
     log(`Attack damage to ${target.name}: -${dmg} HP.`);
