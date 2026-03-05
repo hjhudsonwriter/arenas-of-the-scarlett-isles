@@ -494,3 +494,37 @@ select option{
   border: 0;
   padding: 0;
 }
+
+/* Lion’s Mark HUD (bottom-left of arena image) */
+.lionsMarkHud{
+  position:absolute;
+  left:16px;
+  bottom:16px;
+  width:180px;
+  padding:10px 10px 12px;
+  border-radius:14px;
+  background: rgba(0,0,0,.55);
+  border: 1px solid rgba(217,179,95,.45);
+  backdrop-filter: blur(6px);
+  pointer-events:none;
+  z-index: 50; /* above scene overlays */
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:8px;
+}
+
+.lionsMarkHudIcon{
+  width:84px;
+  height:84px;
+  object-fit:contain;
+  filter: drop-shadow(0 6px 10px rgba(0,0,0,.55));
+}
+
+.lionsMarkHudName{
+  font-weight:800;
+  letter-spacing:.3px;
+  text-align:center;
+  font-size:16px;
+  line-height:1.1;
+}
