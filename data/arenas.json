@@ -214,10 +214,8 @@
     "pc_fail_variants": [
       "assets/overlays/lion_swordsman_fail.png"
     ]
-  }
-},
+  },
 
-  "secondary_overlay_boss": "assets/overlays/lions_totems_standard.png",
   "secondary_overlays": {
     "pc_hit": "assets/overlays/lions_totems_hit.png",
     "pc_fail_variants": [
