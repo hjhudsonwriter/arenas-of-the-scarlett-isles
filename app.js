@@ -27,6 +27,7 @@ const SFX = {
   r5_hit: "assets/sfx/wyvern_hit.mp3",
   r5_fail:"assets/sfx/wyvern_fail.mp3",
     // Middlemount: Lion's Crown
+  lions_mark_horn: "assets/sfx/horn_blast.mp3", 
   mm_r2_hit: "assets/sfx/lions_totems_hit.mp3",
   mm_r2_fail:"assets/sfx/lions_totems_fail.mp3",
     // Middlemount: Lion's Mark (play all 3 simultaneously)
@@ -724,6 +725,7 @@ function setScene(){
     }
   }
   renderLionsMarkHud();
+  hideLionsMarkAnnouncement();
   hideOverlay();
 }
 
@@ -1070,6 +1072,31 @@ function renderLionsMarkHud(){
   hud.classList.remove("hidden");
 }
 
+let lionsMarkAnnounceTimer = null;
+
+function hideLionsMarkAnnouncement(){
+  const el = document.getElementById("lionsMarkAnnounce");
+  if(!el) return;
+  el.classList.add("hidden");
+}
+
+function showLionsMarkAnnouncement(playerName){
+  const el = document.getElementById("lionsMarkAnnounce");
+  const textEl = document.getElementById("lionsMarkAnnounceText");
+  if(!el || !textEl) return;
+
+  textEl.textContent = `${playerName}, you have The Lion's Mark...`;
+  el.classList.remove("hidden");
+
+  playOneShot(SFX.lions_mark_horn, 0.95);
+
+  if(lionsMarkAnnounceTimer) clearTimeout(lionsMarkAnnounceTimer);
+  lionsMarkAnnounceTimer = window.setTimeout(()=>{
+    hideLionsMarkAnnouncement();
+    lionsMarkAnnounceTimer = null;
+  }, 5000);
+}
+
 function pulseLionsMarkHud(){
   const hud = document.getElementById("lionsMarkHud");
   if(!hud) return;
@@ -1081,7 +1108,7 @@ function pulseLionsMarkHud(){
   window.setTimeout(()=> hud.classList.remove("pulse"), 5000);
 }
 
-function ensureLionsMark(){
+function ensureLionsMark(announce=false){
   const r = getRound();
   if(!r || r.id !== "mm_r3") return;
 
@@ -1095,11 +1122,15 @@ function ensureLionsMark(){
   let pool = alive.filter(p => p.id !== state.mmR3LastMarkedId);
   if(pool.length === 0) pool = alive;
 
-  const pick = pool[Math.floor(Math.random() * pool.length)];
-    state.mmR3MarkPlayerId = pick.id;
+    const pick = pool[Math.floor(Math.random() * pool.length)];
+  state.mmR3MarkPlayerId = pick.id;
   state.mmR3LastMarkedId = pick.id;
 
   renderLionsMarkHud();
+
+  if(announce){
+    showLionsMarkAnnouncement(pick.name);
+  }
 }
 
 function partyAlive(){
@@ -1388,14 +1419,14 @@ function openTurnDock(){
     return;
   }
 
-  // Middlemount Round 3: Lion’s Mark changes once per full rotation (once everyone has acted)
+      // Middlemount Round 3: Lion’s Mark changes once per full rotation (once everyone has acted)
   if(round.id === "mm_r3"){
     const markedAlive = alivePlayers.some(x => x.id === state.mmR3MarkPlayerId);
     const isNewRotation = (state.turnIndex % alivePlayers.length === 0);
 
     // Pick a mark at the start of the rotation, or if the current mark is dead/missing
     if(isNewRotation || !markedAlive){
-      ensureLionsMark();
+      ensureLionsMark(true);   // announce the new mark
     }else{
       renderLionsMarkHud();
     }
