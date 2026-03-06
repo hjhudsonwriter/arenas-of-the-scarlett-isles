@@ -1070,6 +1070,17 @@ function renderLionsMarkHud(){
   hud.classList.remove("hidden");
 }
 
+function pulseLionsMarkHud(){
+  const hud = document.getElementById("lionsMarkHud");
+  if(!hud) return;
+
+  hud.classList.remove("pulse");      // restart animation if spammed
+  void hud.offsetWidth;               // force reflow
+  hud.classList.add("pulse");
+
+  window.setTimeout(()=> hud.classList.remove("pulse"), 460);
+}
+
 function ensureLionsMark(){
   const r = getRound();
   if(!r || r.id !== "mm_r3") return;
@@ -1112,6 +1123,10 @@ function applyFailureToPlayer(p, round){
   }
 
   victim.hp = clamp(victim.hp - dmg.total, 0, victim.maxHp);
+  // Pulse the Lion's Mark HUD when the marked player is the one taking damage
+if(round.id === "mm_r3" && victim.id === state.mmR3MarkPlayerId && dmg.total > 0){
+  pulseLionsMarkHud();
+} 
 
         const ov = round.scene?.overlays || {};
 
