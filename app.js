@@ -1730,10 +1730,15 @@ function resolveTurnFromDock(round){
   // Overtime pressure (after turn_limit)
   applyOvertimePressure(round);
 
-  // Check victory/defeat conditions
+    // Check victory/defeat conditions
   const victoryByScore = state.successes >= sc.target_successes;
   const defeatByFails = state.failures >= sc.max_failures;
   const defeatByWipe = !partyAlive();
+
+  // Middlemount Round 3 special lose condition:
+  // if 2 players reach 0 HP, the round is lost.
+  const downPlayers = state.players.filter(x => (x.hp || 0) <= 0).length;
+  const defeatByTwoDown = (round.id === "mm_r3" && downPlayers >= 2);
 
   // Alternate win: all enemies defeated (hybrid pace)
   const victoryByKO = !enemiesAlive();
@@ -1756,7 +1761,7 @@ function resolveTurnFromDock(round){
     return;
   }
 
-  if(defeatByFails || defeatByWipe){
+    if(defeatByFails || defeatByWipe || defeatByTwoDown){
     endRound(false);
     return;
   }
