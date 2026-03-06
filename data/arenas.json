@@ -226,7 +226,7 @@
           "reward_gp": 8000,
           "skill_challenge": {
             "target_successes": 8,
-            "max_failures": 3,
+            "max_failures": 5,
             "damage_on_failure": "5d6",
             "dcs": { "easy": 15, "standard": 17, "hard": 19 },
             "turn_limit": 7,
@@ -273,7 +273,7 @@
           "reward_gp": 25000,
           "skill_challenge": {
             "target_successes": 10,
-            "max_failures": 3,
+            "max_failures": 5,
             "damage_on_failure": "6d6",
             "dcs": { "easy": 16, "standard": 18, "hard": 20 },
             "turn_limit": 7,
@@ -285,7 +285,7 @@
               "A brutal champion rides a dire lion.",
               "Each turn, a player is chosen as the Lion’s Mark.",
               "On a failed Skill check, the champion strikes the marked player (not the active player).",
-              "Win: drive the champion back (10 successes) or defeat them by damage."
+              "Win: drive the champion back (10 successes) or defeat them by damage. Lose: if failures reach 5, or if 2 players reach 0 HP."
             ],
             "actions": [
               { "id": "athletics", "label": "Hold ground and brace (Athletics)" },
