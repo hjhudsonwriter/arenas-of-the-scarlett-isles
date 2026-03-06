@@ -1078,7 +1078,7 @@ function pulseLionsMarkHud(){
   void hud.offsetWidth;               // force reflow
   hud.classList.add("pulse");
 
-  window.setTimeout(()=> hud.classList.remove("pulse"), 460);
+  window.setTimeout(()=> hud.classList.remove("pulse"), 5000);
 }
 
 function ensureLionsMark(){
